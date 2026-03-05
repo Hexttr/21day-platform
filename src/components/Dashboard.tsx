@@ -43,6 +43,7 @@ export function Dashboard() {
 
   const allLessons = courseData.flatMap(week => week.lessons);
   const nextLesson = allLessons.find(lesson => !isLessonCompleted(lesson.id) && isLessonPublished(lesson.id));
+  const allCompleted = completedCount >= 21;
 
   const firstName = user?.name?.split(' ')[0] || 'Студент';
 
@@ -60,9 +61,9 @@ export function Dashboard() {
 
   if (selectedLesson && isLessonPublished(selectedLesson.id)) {
     return (
-      <div className="min-h-screen bg-background">
-        {/* Minimal top bar for lesson view */}
-        <div className="sticky top-0 z-40 flex items-center gap-3 px-4 sm:px-6 h-14 bg-card/80 backdrop-blur-xl border-b border-border/50">
+      <div className="min-h-screen" style={{ backgroundColor: 'hsl(248deg 100% 94.56%)' }}>
+        {/* Minimal top bar for lesson view (mobile only) */}
+        <div className="md:hidden sticky top-0 z-40 flex items-center gap-3 px-4 sm:px-6 h-14 bg-card/80 backdrop-blur-xl border-b border-border/50">
           <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors" />
           <span className="font-semibold text-foreground text-sm">
             <span className="text-primary">21DAY</span> — День {selectedLesson.day}
@@ -81,7 +82,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background mesh-bg">
+    <div className="min-h-screen mesh-bg" style={{ backgroundColor: 'hsl(248deg 100% 94.56%)' }}>
       {/* ── Impersonation banner ── */}
       {isImpersonating && (
         <div className="bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-center gap-3">
@@ -95,8 +96,8 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* ── Slim top bar (just mobile trigger + user menu) ── */}
-      <div className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 h-14 bg-background/90 backdrop-blur-xl border-b border-border/40">
+      {/* ── Slim top bar (mobile only; desktop: no header) ── */}
+      <div className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 h-14 bg-background/90 backdrop-blur-xl border-b border-border/40">
         <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors" />
 
         <div className="flex items-center gap-2">
@@ -185,10 +186,15 @@ export function Dashboard() {
                   <span className="font-normal text-primary/70">— День {nextLesson.day}</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
-              ) : (
+              ) : allCompleted ? (
                 <div className="inline-flex items-center gap-3 bg-white/20 border border-white/30 text-white font-semibold px-7 py-3.5 rounded-2xl backdrop-blur-sm">
                   <Trophy className="w-5 h-5" />
                   Все уроки пройдены! 🎉
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-3 bg-white/20 border border-white/30 text-white font-semibold px-7 py-3.5 rounded-2xl backdrop-blur-sm">
+                  <Sparkles className="w-5 h-5" />
+                  Уроки скоро появятся
                 </div>
               )}
             </div>

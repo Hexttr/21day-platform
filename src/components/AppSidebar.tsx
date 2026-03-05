@@ -1,4 +1,4 @@
-import { BookOpen, Users, Ticket, Play, ClipboardList } from "lucide-react";
+import { Users, Ticket, Play, ClipboardList, LogOut, BookOpen, X } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProgress } from "@/contexts/ProgressContext";
@@ -15,6 +15,7 @@ import {
   useSidebar,
   SidebarSeparator,
   SidebarFooter,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 /* ── Real brand logos as inline SVGs ── */
@@ -56,10 +57,6 @@ function BananaLogo({ size = 16 }: { size?: number }) {
   );
 }
 
-const courseItems = [
-  { title: "Курс", url: "/", icon: BookOpen },
-];
-
 const toolItems = [
   { 
     title: "ChatGPT", url: "/chatgpt", 
@@ -91,7 +88,7 @@ const adminItems = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, signOut } = useAuth();
   const { getCompletedCount, getProgressPercentage } = useProgress();
   const location = useLocation();
   const collapsed = state === "collapsed";
@@ -101,26 +98,29 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
-      {/* ── Logo ── */}
+      {/* ── Logo + collapse button ── */}
       <SidebarHeader className="p-4 pb-3">
         {!collapsed ? (
-          <NavLink to="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-glow flex-shrink-0">
-              <span className="text-white font-extrabold text-sm tracking-tight">21</span>
-            </div>
-            <div>
-              <span className="font-extrabold text-foreground text-base tracking-tight leading-none">
-                21<span className="text-primary">DAY</span>
+          <div className="flex items-center gap-2 w-full">
+            <NavLink to="/" className="flex items-center gap-3 group flex-1 min-w-0">
+              <div className="w-11 h-11 rounded-xl gradient-hero flex items-center justify-center shadow-glow flex-shrink-0">
+                <span className="text-white font-extrabold text-lg tracking-tight">21</span>
+              </div>
+              <span className="font-extrabold text-black text-2xl tracking-tight leading-none" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                DAY
               </span>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5 font-medium">Курс по ИИ</p>
-            </div>
-          </NavLink>
+            </NavLink>
+            <SidebarTrigger className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-foreground rounded-lg" />
+          </div>
         ) : (
-          <NavLink to="/" className="flex justify-center">
-            <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-glow">
-              <span className="text-white font-extrabold text-sm tracking-tight">21</span>
-            </div>
-          </NavLink>
+          <div className="flex flex-col items-center gap-2">
+            <NavLink to="/" className="flex justify-center">
+              <div className="w-11 h-11 rounded-xl gradient-hero flex items-center justify-center shadow-glow">
+                <span className="text-white font-extrabold text-lg tracking-tight">21</span>
+              </div>
+            </NavLink>
+            <SidebarTrigger className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg" />
+          </div>
         )}
       </SidebarHeader>
 
@@ -143,27 +143,6 @@ export function AppSidebar() {
             </div>
           </div>
         )}
-
-        {/* ── Course ── */}
-        <SidebarGroup className="pt-1">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {courseItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-                      <NavLink to={item.url} className="flex items-center gap-3">
-                        <item.icon className="h-4.5 w-4.5" style={{ width: '18px', height: '18px' }} />
-                        <span className="font-medium">{item.title}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
 
         {/* ── AI Tools ── */}
         <SidebarGroup>
@@ -222,31 +201,40 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      {/* ── User footer ── */}
+      {/* ── User footer: card + full-width Выйти ── */}
       {user && (
-        <SidebarFooter className="p-3">
+        <SidebarFooter className="p-3 space-y-2">
           {!collapsed ? (
-            <div className="flex items-center gap-2.5 px-2 py-2.5 rounded-xl bg-secondary/60 border border-border/50">
-              <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center flex-shrink-0 shadow-glow">
-                <span className="text-xs font-bold text-white">
-                  {(user.name?.charAt(0) || user.email?.charAt(0) || '?').toUpperCase()}
-                </span>
+            <>
+              <div className="flex items-center gap-2.5 px-2 py-2.5 rounded-xl bg-secondary/60 border border-border/50">
+                <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center flex-shrink-0 shadow-glow">
+                  <span className="text-xs font-bold text-white">
+                    {(user.name?.charAt(0) || user.email?.charAt(0) || '?').toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground truncate leading-tight">
+                    {user.name || 'Пользователь'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground truncate mt-0.5">{user.email}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-foreground truncate leading-tight">
-                  {user.name || 'Пользователь'}
-                </p>
-                <p className="text-[10px] text-muted-foreground truncate mt-0.5">{user.email}</p>
-              </div>
-            </div>
+              <button
+                onClick={() => signOut()}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive font-medium text-sm hover:bg-destructive hover:text-white transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Выйти
+              </button>
+            </>
           ) : (
-            <div className="flex justify-center">
-              <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center shadow-glow">
-                <span className="text-xs font-bold text-white">
-                  {(user.name?.charAt(0) || user.email?.charAt(0) || '?').toUpperCase()}
-                </span>
-              </div>
-            </div>
+            <button
+              onClick={() => signOut()}
+              className="w-8 h-8 rounded-full flex items-center justify-center border border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive hover:text-white transition-colors flex-shrink-0 mx-auto"
+              title="Выйти"
+            >
+              <X className="w-4 h-4" />
+            </button>
           )}
         </SidebarFooter>
       )}

@@ -3,7 +3,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 
 export default function NanoBanana() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ backgroundColor: 'hsl(248deg 100% 94.56%)' }}>
       <div className="h-screen flex flex-col">
         {/* Header */}
         <header className="flex-shrink-0 border-b border-border/50 bg-card/80 backdrop-blur-xl sticky top-0 z-10">

@@ -34,7 +34,7 @@ export function AdminPageLayout({
   }[iconColor];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ backgroundColor: 'hsl(248deg 100% 94.56%)' }}>
       {/* Sticky page header */}
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center gap-3 px-4 sm:px-6 h-16">

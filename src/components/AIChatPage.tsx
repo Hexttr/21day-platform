@@ -162,7 +162,7 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col" style={{ backgroundColor: 'hsl(248deg 100% 94.56%)' }}>
       {/* Header */}
       <header className="flex-shrink-0 bg-card/80 backdrop-blur-xl border-b border-border/50 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 h-16">
