@@ -82,7 +82,7 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
 
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:3001/api');
       const response = await fetch(`${apiUrl}/ai/chat`, {
         method: 'POST',
         headers: {
@@ -104,8 +104,22 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
         return;
       }
 
+      if (response.status === 401) {
+        toast.error('Войдите в аккаунт для использования чата');
+        setIsLoading(false);
+        return;
+      }
+      if (response.status === 404) {
+        toast.error('Сервер не найден. Убедитесь, что backend запущен.');
+        setIsLoading(false);
+        return;
+      }
       if (!response.ok || !response.body) {
-        throw new Error('Failed to start stream');
+        const errData = await response.json().catch(() => ({}));
+        const errMsg = typeof errData?.error === 'string' ? errData.error : errData?.error?.message || `Ошибка ${response.status}`;
+        toast.error(errMsg);
+        setIsLoading(false);
+        return;
       }
 
       const reader = response.body.getReader();

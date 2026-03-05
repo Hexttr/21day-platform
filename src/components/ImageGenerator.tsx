@@ -47,7 +47,7 @@ export function ImageGenerator() {
 
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:3001/api');
       const response = await fetch(`${apiUrl}/ai/image`, {
         method: 'POST',
         headers: {
@@ -60,7 +60,8 @@ export function ImageGenerator() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Ошибка генерации');
+        const errMsg = typeof data?.error === 'string' ? data.error : data?.error?.message || 'Ошибка генерации';
+        throw new Error(errMsg);
       }
 
       if (data.imageUrl) {

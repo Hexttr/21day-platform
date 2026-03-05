@@ -8,44 +8,66 @@
 - **Backend:** Node.js, Fastify, Drizzle ORM, PostgreSQL
 - **AI:** Google Gemini (чат, квиз-тьютор, генерация изображений)
 
-## Быстрый старт
+## Инструкция по запуску
 
-### 1. База данных
+### 1. PostgreSQL
 
-**Вариант A: Docker (рекомендуется)**
+Установите PostgreSQL локально или запустите через Docker:
 
 ```bash
-# Запустите Docker Desktop, затем:
 docker compose up -d
 ```
 
-**Вариант B:** Создайте PostgreSQL локально или используйте Neon/Railway и базу `21day`.
+Если PostgreSQL уже установлен — создайте базу `21day` или используйте существующую.
 
-### 2. Backend
+### 2. Backend (первый запуск)
 
 ```bash
 cd server
 npm install
 cp .env.example .env
-# Заполните DATABASE_URL, JWT_SECRET, GEMINI_API_KEY
-
-npm run db:migrate   # Применить миграции
-npm run db:seed      # Создать первый код и админа (admin@example.com / admin123)
-npm run dev          # Запуск на :3001
 ```
 
-### 3. Frontend
+Отредактируйте `server/.env`:
+
+```
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/21day"
+JWT_SECRET="21day-dev-secret-change-in-production"
+GEMINI_API_KEY="ваш-ключ-gemini-api"
+```
+
+Создайте БД, примените миграции и seed:
 
 ```bash
-cd ..
-npm install
-cp .env.example .env
-# VITE_API_URL=http://localhost:3001/api
-
-npm run dev          # Запуск на :8080
+npm run db:create    # Создать БД 21day (если нет)
+npm run db:migrate   # Применить миграции
+npm run db:seed      # Создать админа и инвайт-код
 ```
 
-Откройте http://localhost:8080 и войдите как admin@example.com / admin123
+### 3. Запуск (каждый раз)
+
+**Терминал 1 — Backend:**
+
+```bash
+cd server
+npm run dev
+```
+
+Сервер запустится на **http://localhost:3001**
+
+**Терминал 2 — Frontend:**
+
+```bash
+npm install          # только при первом запуске
+npm run dev
+```
+
+Приложение откроется на **http://localhost:8080** (или 8081/8082, если порт занят).
+
+### 4. Вход
+
+- **Админ:** admin@example.com / admin123
+- **Инвайт-код для регистрации:** ADMIN2025 (из seed)
 
 ## Скрипты
 
@@ -60,7 +82,7 @@ npm run dev          # Запуск на :8080
 
 ```
 src/
-├── api/           # Supabase клиент и сервисы
+├── api/           # API-клиент
 ├── components/    # UI-компоненты
 ├── contexts/     # React contexts (Auth, Progress, Impersonation)
 ├── hooks/        # Custom hooks

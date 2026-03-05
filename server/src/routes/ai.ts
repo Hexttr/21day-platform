@@ -2,13 +2,47 @@ import { FastifyInstance } from 'fastify';
 import { getAuthFromRequest } from '../lib/auth.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_CHAT_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent';
-const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.0-flash-exp';
+const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash';
+const GEMINI_CHAT_FALLBACKS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+const GEMINI_CHAT_URL = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent`;
+const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.0-flash-preview-image-generation';
+const GEMINI_IMAGE_FALLBACKS = ['gemini-2.0-flash-exp'];
 
 export async function aiRoutes(app: FastifyInstance) {
-  const requireAuth = (req: { headers: { authorization?: string } }) => {
-    const payload = getAuthFromRequest(req as Parameters<typeof getAuthFromRequest>[0]);
-    if (!payload) throw new Error('Unauthorized');
+  // Health check (no auth) - verify AI routes are loaded
+  app.get('/ai/health', async (_req, reply) => {
+    return reply.send({ ok: true, service: 'ai' });
+  });
+
+  // List available models (for debugging - no auth)
+  app.get('/ai/models', async (_req, reply) => {
+    if (!GEMINI_API_KEY) {
+      return reply.status(500).send({ error: 'GEMINI_API_KEY не настроен' });
+    }
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        return reply.status(res.status).send(data);
+      }
+      const models = (data.models || []).map((m: { name: string; supportedGenerationMethods?: string[] }) => ({
+        name: m.name?.replace('models/', ''),
+        methods: m.supportedGenerationMethods,
+      }));
+      return reply.send({ models });
+    } catch (e) {
+      return reply.status(500).send({ error: String(e) });
+    }
+  });
+
+  const requireAuth = (req: Parameters<typeof getAuthFromRequest>[0], reply: { status: (code: number) => { send: (body: unknown) => unknown } }) => {
+    const payload = getAuthFromRequest(req);
+    if (!payload) {
+      reply.status(401).send({ error: 'Требуется авторизация' });
+      return null;
+    }
     return payload;
   };
 
@@ -16,7 +50,7 @@ export async function aiRoutes(app: FastifyInstance) {
   app.post<{
     Body: { messages: Array<{ role: string; content: string }>; model?: string };
   }>('/ai/chat', async (req, reply) => {
-    requireAuth(req);
+    if (!requireAuth(req, reply)) return;
     if (!GEMINI_API_KEY) {
       return reply.status(500).send({ error: 'GEMINI_API_KEY не настроен' });
     }
@@ -32,19 +66,36 @@ export async function aiRoutes(app: FastifyInstance) {
         },
       ],
     };
-    const url = `${GEMINI_CHAT_URL}?key=${GEMINI_API_KEY}&alt=sse`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction,
-        contents,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
-      }),
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      return reply.status(res.status).send({ error: err || 'AI error' });
+    const modelsToTry = [GEMINI_CHAT_MODEL, ...GEMINI_CHAT_FALLBACKS];
+    let res: Response | null = null;
+    let lastErr = '';
+    for (const model of modelsToTry) {
+      const url = `${GEMINI_CHAT_URL(model)}?key=${GEMINI_API_KEY}&alt=sse`;
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction,
+          contents,
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+        }),
+      });
+      if (res.ok) break;
+      lastErr = await res.text();
+      if (res.status !== 404) {
+        return reply.status(res.status).send({ error: lastErr || 'AI error' });
+      }
+    }
+    if (!res || !res.ok) {
+      const errObj = (() => {
+        try {
+          return JSON.parse(lastErr);
+        } catch {
+          return { error: lastErr || 'AI model not found' };
+        }
+      })();
+      const msg = errObj?.error?.message || errObj?.error || lastErr || 'AI model not found';
+      return reply.status(502).send({ error: msg });
     }
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -91,7 +142,7 @@ export async function aiRoutes(app: FastifyInstance) {
   app.post<{
     Body: { prompt: string; image?: string };
   }>('/ai/image', async (req, reply) => {
-    requireAuth(req);
+    if (!requireAuth(req, reply)) return;
     if (!GEMINI_API_KEY) {
       return reply.status(500).send({ error: 'GEMINI_API_KEY не настроен' });
     }
@@ -106,21 +157,37 @@ export async function aiRoutes(app: FastifyInstance) {
       const base64 = image.replace(/^data:image\/\w+;base64,/, '');
       parts.push({ inlineData: { mimeType: 'image/png', data: base64 } });
     }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts }],
-        generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE'],
-          responseMimeType: 'image/png',
-        },
-      }),
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      return reply.status(res.status).send({ error: err || 'AI image error' });
+    const imageModelsToTry = [GEMINI_IMAGE_MODEL, ...GEMINI_IMAGE_FALLBACKS];
+    let res: Response | null = null;
+    let lastErr = '';
+    for (const model of imageModelsToTry) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE'],
+          },
+        }),
+      });
+      if (res.ok) break;
+      lastErr = await res.text();
+      if (res.status !== 404) {
+        return reply.status(res.status).send({ error: lastErr || 'AI image error' });
+      }
+    }
+    if (!res || !res.ok) {
+      const errObj = (() => {
+        try {
+          return JSON.parse(lastErr);
+        } catch {
+          return { error: lastErr };
+        }
+      })();
+      const msg = errObj?.error?.message || errObj?.error || lastErr || 'Модель для генерации изображений недоступна';
+      return reply.status(502).send({ error: msg });
     }
     const data = await res.json();
     const candidate = data.candidates?.[0];
@@ -157,7 +224,7 @@ export async function aiRoutes(app: FastifyInstance) {
       };
     };
   }>('/ai/quiz', async (req, reply) => {
-    requireAuth(req);
+    if (!requireAuth(req, reply)) return;
     if (!GEMINI_API_KEY) {
       return reply.status(500).send({ error: 'GEMINI_API_KEY не настроен' });
     }
@@ -269,7 +336,7 @@ ${JSON.stringify(learningState, null, 2)}`;
       },
     ];
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
