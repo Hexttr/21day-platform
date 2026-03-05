@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { useImpersonation } from './ImpersonationContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/api/supabase';
 
 interface LessonProgress {
   lessonId: number;

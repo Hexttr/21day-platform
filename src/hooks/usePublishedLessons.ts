@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/api/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function usePublishedLessons() {

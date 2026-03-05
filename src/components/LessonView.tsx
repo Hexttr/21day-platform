@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lesson, getWeekByLessonId } from '@/data/courseData';
 import { useProgress } from '@/contexts/ProgressContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/api/supabase';
 import { Button } from '@/components/ui/button';
 import { 
   ChevronDown, 
