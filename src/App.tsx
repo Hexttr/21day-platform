@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProgressProvider } from "@/contexts/ProgressContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index";
 import ChatGPT from "./pages/ChatGPT";
@@ -51,8 +51,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <main className="flex-1 relative">
-          <SidebarTrigger className="fixed top-4 left-4 z-50 bg-card/80 backdrop-blur-sm border border-border/50 shadow-soft" />
+        <main className="flex-1 relative min-w-0">
           {children}
         </main>
       </div>

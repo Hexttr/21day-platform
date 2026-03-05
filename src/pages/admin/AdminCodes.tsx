@@ -3,13 +3,16 @@ import { api } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { 
   Loader2, 
   Plus, 
   Ticket,
-  Copy
+  Copy,
+  Shuffle,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,27 +51,17 @@ export default function AdminCodes() {
   const generateRandomCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
-    for (let i = 0; i < 7; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+    for (let i = 0; i < 7; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
     setNewCode(code);
   };
 
   const saveInvitationCode = async () => {
-    if (!newCode.trim() || !newComment.trim()) {
-      toast.error('Введите код и комментарий');
-      return;
-    }
-
+    if (!newCode.trim() || !newComment.trim()) { toast.error('Введите код и комментарий'); return; }
     setSavingCode(true);
     try {
-      await api('/admin/codes', {
-        method: 'POST',
-        body: { code: newCode.trim().toUpperCase(), comment: newComment.trim(), isActive: true }
-      });
+      await api('/admin/codes', { method: 'POST', body: { code: newCode.trim().toUpperCase(), comment: newComment.trim(), isActive: true } });
       toast.success('Код создан!');
-      setNewCode('');
-      setNewComment('');
+      setNewCode(''); setNewComment('');
       loadInvitationCodes();
     } catch (error: unknown) {
       console.error('Error saving code:', error);
@@ -80,10 +73,7 @@ export default function AdminCodes() {
 
   const toggleCodeActive = async (code: InvitationCode) => {
     try {
-      await api(`/admin/codes/${code.id}`, {
-        method: 'PUT',
-        body: { isActive: !code.is_active }
-      });
+      await api(`/admin/codes/${code.id}`, { method: 'PUT', body: { isActive: !code.is_active } });
       loadInvitationCodes();
       toast.success(code.is_active ? 'Код деактивирован' : 'Код активирован');
     } catch (error) {
@@ -97,106 +87,143 @@ export default function AdminCodes() {
     toast.success('Код скопирован!');
   };
 
+  const activeCount = invitationCodes.filter(c => c.is_active).length;
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-2xl font-serif font-bold text-foreground">Пригласительные коды</h1>
-          <p className="text-muted-foreground">Управление кодами для регистрации</p>
+    <AdminPageLayout
+      title="Пригласительные коды"
+      description="Управление кодами для регистрации студентов"
+      icon={Ticket}
+      iconColor="accent"
+    >
+      <div className="space-y-5">
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          {[
+            { label: 'Всего кодов', value: invitationCodes.length, icon: Ticket, color: 'primary' },
+            { label: 'Активных', value: activeCount, icon: CheckCircle2, color: 'success' },
+          ].map(stat => (
+            <div key={stat.label} className="bg-card rounded-2xl border border-border/50 shadow-soft p-4 sm:p-5">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${
+                stat.color === 'primary' ? 'bg-primary/10' : 'bg-success/10'
+              }`}>
+                <stat.icon className={`${stat.color === 'primary' ? 'text-primary' : 'text-success'}`} style={{ width: '18px', height: '18px' }} />
+              </div>
+              <p className="text-2xl font-serif font-semibold text-foreground">{stat.value}</p>
+              <p className="text-xs text-muted-foreground font-medium mt-0.5">{stat.label}</p>
+            </div>
+          ))}
         </div>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Создать новый код
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Код</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={newCode}
-                      onChange={(e) => setNewCode(e.target.value.toUpperCase())}
-                      placeholder="ABC1234"
-                      maxLength={10}
+        {/* Create Code */}
+        <div className="bg-card rounded-2xl border border-border/50 shadow-soft p-5 sm:p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Plus className="w-4.5 h-4.5 text-primary" style={{ width: '18px', height: '18px' }} />
+            </div>
+            <div>
+              <h2 className="font-serif font-semibold text-foreground">Создать новый код</h2>
+              <p className="text-xs text-muted-foreground">Код привязывается к потоку/группе студентов</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 mb-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Код</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newCode}
+                  onChange={(e) => setNewCode(e.target.value.toUpperCase())}
+                  placeholder="ABC1234"
+                  maxLength={10}
+                  className="rounded-xl bg-secondary/30 border-border/50 focus:border-primary font-mono uppercase"
+                />
+                <Button type="button" variant="outline" onClick={generateRandomCode} className="rounded-xl flex-shrink-0" title="Сгенерировать">
+                  <Shuffle className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Комментарий (поток)</Label>
+              <Input
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Поток Январь 2025"
+                className="rounded-xl bg-secondary/30 border-border/50 focus:border-primary"
+              />
+            </div>
+          </div>
+          <Button onClick={saveInvitationCode} disabled={savingCode} className="rounded-xl gradient-hero hover:opacity-90 shadow-glow gap-2">
+            {savingCode ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Создать код
+          </Button>
+        </div>
+
+        {/* Codes List */}
+        <div className="bg-card rounded-2xl border border-border/50 shadow-soft overflow-hidden">
+          <div className="flex items-center gap-3 px-5 sm:px-6 py-4 border-b border-border/50">
+            <Ticket className="w-4.5 h-4.5 text-accent" style={{ width: '18px', height: '18px' }} />
+            <h2 className="font-serif font-semibold text-foreground">Существующие коды</h2>
+            <span className="text-xs font-semibold text-muted-foreground bg-secondary px-2 py-0.5 rounded-full ml-auto">
+              {invitationCodes.length}
+            </span>
+          </div>
+
+          {loadingCodes ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : invitationCodes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Ticket className="w-10 h-10 text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground">Нет созданных кодов</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {invitationCodes.map((code) => (
+                <div
+                  key={code.id}
+                  className={`flex items-center gap-4 px-5 sm:px-6 py-4 transition-colors ${
+                    code.is_active ? 'hover:bg-secondary/20' : 'opacity-60 bg-muted/20'
+                  }`}
+                >
+                  <div className={`w-2 h-8 rounded-full flex-shrink-0 ${code.is_active ? 'bg-success' : 'bg-muted'}`} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <code className="font-mono font-bold text-base text-foreground tracking-widest">
+                        {code.code}
+                      </code>
+                      <button
+                        onClick={() => copyCodeToClipboard(code.code)}
+                        className="p-1 rounded-md hover:bg-secondary/70 text-muted-foreground hover:text-foreground transition-colors"
+                        title="Скопировать"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-0.5 truncate">{code.comment}</p>
+                  </div>
+
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className={`text-xs font-medium flex items-center gap-1 ${code.is_active ? 'text-success' : 'text-muted-foreground'}`}>
+                      {code.is_active ? (
+                        <><CheckCircle2 className="w-3.5 h-3.5" /> Активен</>
+                      ) : (
+                        <><XCircle className="w-3.5 h-3.5" /> Неактивен</>
+                      )}
+                    </span>
+                    <Switch
+                      checked={code.is_active}
+                      onCheckedChange={() => toggleCodeActive(code)}
                     />
-                    <Button type="button" variant="outline" onClick={generateRandomCode}>
-                      Генерировать
-                    </Button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Комментарий (название потока)</Label>
-                  <Input
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Поток Январь 2025"
-                  />
-                </div>
-              </div>
-              <Button onClick={saveInvitationCode} disabled={savingCode}>
-                {savingCode ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Создать код
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Ticket className="w-5 h-5" />
-                Существующие коды
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingCodes ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {invitationCodes.map((code) => (
-                    <div 
-                      key={code.id} 
-                      className={`flex items-center justify-between p-4 rounded-lg border ${
-                        code.is_active ? 'bg-secondary/30' : 'bg-muted/30 opacity-60'
-                      }`}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <code className="font-mono font-bold text-lg">{code.code}</code>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => copyCodeToClipboard(code.code)}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{code.comment}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-muted-foreground">
-                          {code.is_active ? 'Активен' : 'Неактивен'}
-                        </span>
-                        <Switch
-                          checked={code.is_active}
-                          onCheckedChange={() => toggleCodeActive(code)}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </AdminPageLayout>
   );
 }

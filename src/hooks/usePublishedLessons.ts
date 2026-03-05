@@ -33,7 +33,7 @@ export function usePublishedLessons() {
     console.log('[PublishedLessons] Starting fetch, force:', force, 'timestamp:', Date.now());
     
     try {
-      const data = await api<Array<{ lesson_id: number }>>('/lessons');
+      const data = await api<Array<{ lessonId: number }>>('/lessons');
 
       if (!mountedRef.current) {
         console.log('[PublishedLessons] Component unmounted, ignoring response');

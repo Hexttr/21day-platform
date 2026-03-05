@@ -35,7 +35,7 @@ export function Dashboard() {
     setSelectedLessonId(null);
   };
 
-  const firstName = user?.user_metadata?.name?.split(' ')[0] || 'Студент';
+  const firstName = user?.name?.split(' ')[0] || 'Студент';
 
   return (
     <div className="min-h-screen bg-background mesh-bg">

@@ -316,6 +316,11 @@
     animation: blurIn 0.6s ease-out forwards;
   }
 
+  /* Animate pulse-soft */
+  .animate-pulse-soft {
+    animation: pulseSoft 3s ease-in-out infinite;
+  }
+
   /* Stagger delays */
   .stagger-1 { animation-delay: 50ms; }
   .stagger-2 { animation-delay: 100ms; }

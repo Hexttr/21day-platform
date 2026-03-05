@@ -4,6 +4,7 @@ import { useProgress } from '@/contexts/ProgressContext';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { usePublishedLessons } from '@/hooks/usePublishedLessons';
 import { Button } from '@/components/ui/button';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { 
   Sparkles, 
   LogOut, 
@@ -90,8 +91,8 @@ export function Header({ onNavigateHome }: HeaderProps) {
 
   const displayName = isImpersonating 
     ? impersonatedUser?.name 
-    : (user?.user_metadata?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User');
-  const firstName = user?.user_metadata?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
+    : (user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User');
+  const firstName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -118,7 +119,9 @@ export function Header({ onNavigateHome }: HeaderProps) {
       <div className="absolute inset-0 bg-background/80 backdrop-blur-xl border-b border-border/50" style={{ top: isImpersonating ? 'auto' : 0 }} />
       
       <div className="relative container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
+        {/* Left: Sidebar toggle + Logo */}
+        <div className="flex items-center gap-2">
+          <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors" />
         <button 
           onClick={onNavigateHome}
           className="flex items-center gap-3 group focus-ring rounded-xl"
@@ -139,6 +142,7 @@ export function Header({ onNavigateHome }: HeaderProps) {
             </p>
           </div>
         </button>
+        </div>
 
         {/* Center: Progress (desktop) */}
         <div className="hidden md:flex items-center gap-4 absolute left-1/2 -translate-x-1/2">
