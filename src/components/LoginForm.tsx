@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, Loader2, AlertCircle, Brain, Zap, Target, CalendarPlus } from 'lucide-react';
+import { Loader2, AlertCircle, Brain, Zap, Target, CalendarPlus } from 'lucide-react';
 import { WaitlistModal } from './WaitlistModal';
 
 export function LoginForm() {
@@ -86,15 +86,18 @@ export function LoginForm() {
           <div className="max-w-md">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
+                <span className="text-white font-extrabold text-lg tracking-tight">21</span>
               </div>
-              <span className="font-serif text-2xl font-semibold text-white">
-                NeuroAcademy
+              <span className="font-extrabold text-2xl text-white tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                21DAY
               </span>
             </div>
 
-            <h1 className="font-serif text-4xl xl:text-5xl font-semibold text-white leading-tight mb-6">
-              Освойте ИИ
+            <h1 className="font-extrabold text-4xl xl:text-5xl text-white leading-tight mb-6 tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Освойте{' '}
+              <span className="underline decoration-white/30 underline-offset-4">
+                искусственный интеллект
+              </span>
               <br />
               за 21 день
             </h1>
@@ -139,13 +142,15 @@ export function LoginForm() {
         <div className="w-full max-w-md animate-fade-in-up">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-hero mb-4 shadow-glow">
-              <Sparkles className="w-8 h-8 text-primary-foreground" />
+            <div className="inline-flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-2xl gradient-hero flex items-center justify-center shadow-glow">
+                <span className="text-white font-extrabold text-base tracking-tight">21</span>
+              </div>
+              <span className="font-extrabold text-3xl text-foreground tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                21<span className="text-primary">DAY</span>
+              </span>
             </div>
-            <h1 className="font-serif text-2xl font-semibold text-foreground">
-              Neuro<span className="text-primary">Academy</span>
-            </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-sm">
               21-дневный курс по ИИ
             </p>
             {/* Mobile waitlist button */}

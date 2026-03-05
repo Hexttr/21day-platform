@@ -3,7 +3,7 @@ import { courseData, getLessonById } from '@/data/courseData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProgress } from '@/contexts/ProgressContext';
 import { usePublishedLessons } from '@/hooks/usePublishedLessons';
-import { Header } from './Header';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { WeekCard } from './WeekCard';
 import { LessonView } from './LessonView';
 import { PracticalMaterials } from './PracticalMaterials';
@@ -11,196 +11,275 @@ import {
   BookOpen, 
   Target, 
   Trophy,
-  Zap,
   ArrowRight,
-  Play
+  Play,
+  Sparkles,
+  LogOut,
+  RefreshCw
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
+import { usePublishedLessons as usePublishedLessonsRefresh } from '@/hooks/usePublishedLessons';
+import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Dashboard() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
-  const { getCompletedCount, getProgressPercentage, isLessonCompleted, isLoading: isProgressLoading } = useProgress();
-  const { isLessonPublished, loading: isLessonsLoading } = usePublishedLessons();
+  const { getCompletedCount, getProgressPercentage, isLessonCompleted, isLoading: isProgressLoading, refreshProgress } = useProgress();
+  const { isLessonPublished, loading: isLessonsLoading, refreshPublishedLessons } = usePublishedLessons();
+  const { impersonatedUser, isImpersonating, stopImpersonation } = useImpersonation();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Show actual values only when data is loaded
   const completedCount = isProgressLoading ? 0 : getCompletedCount();
   const progressPercentage = isProgressLoading ? 0 : getProgressPercentage();
   const selectedLesson = selectedLessonId ? getLessonById(selectedLessonId) : null;
 
-  // Find next lesson to continue
   const allLessons = courseData.flatMap(week => week.lessons);
   const nextLesson = allLessons.find(lesson => !isLessonCompleted(lesson.id) && isLessonPublished(lesson.id));
 
-  const handleNavigateHome = () => {
-    setSelectedLessonId(null);
+  const firstName = user?.name?.split(' ')[0] || 'Студент';
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refreshProgress(), refreshPublishedLessons()]);
+      toast.success('Данные обновлены');
+    } catch {
+      toast.error('Ошибка обновления');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
-  const firstName = user?.name?.split(' ')[0] || 'Студент';
+  if (selectedLesson && isLessonPublished(selectedLesson.id)) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Minimal top bar for lesson view */}
+        <div className="sticky top-0 z-40 flex items-center gap-3 px-4 sm:px-6 h-14 bg-card/80 backdrop-blur-xl border-b border-border/50">
+          <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors" />
+          <span className="font-semibold text-foreground text-sm">
+            <span className="text-primary">21DAY</span> — День {selectedLesson.day}
+          </span>
+        </div>
+        <div className="container mx-auto px-4 py-6 max-w-3xl">
+          <LessonView
+            lesson={selectedLesson}
+            onBack={() => setSelectedLessonId(null)}
+            onNavigateToLesson={(id) => { if (isLessonPublished(id)) setSelectedLessonId(id); }}
+            isLessonPublished={isLessonPublished}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background mesh-bg">
-      <Header onNavigateHome={handleNavigateHome} />
-      
-      <main className="container mx-auto px-4 py-6 sm:py-10 max-w-5xl">
-        {selectedLesson && isLessonPublished(selectedLesson.id) ? (
-          <LessonView 
-            lesson={selectedLesson}
-            onBack={() => setSelectedLessonId(null)}
-            onNavigateToLesson={(id) => {
-              if (isLessonPublished(id)) {
-                setSelectedLessonId(id);
-              }
-            }}
-            isLessonPublished={isLessonPublished}
-          />
-        ) : (
-          <>
-            {/* Hero Section */}
-            <section className="mb-10 sm:mb-14 animate-fade-in-up">
-              <div className="relative overflow-hidden rounded-3xl bg-card border border-border/50 shadow-large">
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 gradient-hero opacity-[0.03]" />
-                
-                <div className="relative p-6 sm:p-10">
-                  <div className="max-w-2xl">
-                    {/* Greeting */}
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
-                      <Zap className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-xs font-medium text-primary">
-                        Добро пожаловать, {firstName}!
-                      </span>
-                    </div>
+      {/* ── Impersonation banner ── */}
+      {isImpersonating && (
+        <div className="bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-center gap-3">
+          <span className="text-sm font-medium">
+            👁 Просмотр от имени: <strong>{impersonatedUser?.name}</strong>
+          </span>
+          <Button variant="ghost" size="sm" onClick={stopImpersonation}
+            className="ml-2 h-7 px-2 bg-amber-600/30 hover:bg-amber-600/50 text-amber-950 rounded-lg">
+            Выйти
+          </Button>
+        </div>
+      )}
 
-                    <h1 className="font-serif text-display-sm sm:text-display text-foreground mb-4">
-                      21-дневный курс
-                      <br />
-                      <span className="text-gradient">по ИИ</span>
-                    </h1>
-                    
-                    <p className="text-muted-foreground text-base sm:text-lg leading-relaxed mb-8 max-w-lg">
-                      От новичка до уверенного пользователя. Практические навыки для помогающих специалистов.
-                    </p>
-                    
-                    {/* Progress card */}
-                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-                      <div className="flex-1 p-5 rounded-2xl bg-secondary/50 border border-border/50">
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-sm font-medium text-foreground">Ваш прогресс</span>
-                          <span className="text-2xl font-serif font-semibold text-foreground">
-                            {progressPercentage}%
-                          </span>
-                        </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className="h-full gradient-hero rounded-full transition-all duration-700 ease-out"
-                            style={{ width: `${progressPercentage}%` }}
-                          />
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-3">
-                          {completedCount} из 21 уроков пройдено
-                        </p>
-                      </div>
+      {/* ── Slim top bar (just mobile trigger + user menu) ── */}
+      <div className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 h-14 bg-background/90 backdrop-blur-xl border-b border-border/40">
+        <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors" />
 
-                      {/* Continue button */}
-                      {nextLesson && (
-                        <button
-                          onClick={() => setSelectedLessonId(nextLesson.id)}
-                          className="group flex items-center justify-between p-5 rounded-2xl gradient-hero shadow-glow hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
-                        >
-                          <div className="text-left">
-                            <p className="text-primary-foreground/80 text-sm font-medium mb-1">
-                              Продолжить
-                            </p>
-                            <p className="text-primary-foreground font-semibold truncate max-w-[180px]">
-                              День {nextLesson.day}
-                            </p>
-                          </div>
-                          <ArrowRight className="w-5 h-5 text-primary-foreground ml-4 group-hover:translate-x-1 transition-transform" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost" size="icon"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-secondary/70 transition-colors">
+                <div className="w-7 h-7 rounded-lg gradient-hero flex items-center justify-center shadow-glow">
+                  <span className="text-xs font-bold text-white">{firstName.charAt(0).toUpperCase()}</span>
                 </div>
-
-                {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-primary/5 blur-3xl -translate-y-1/2 translate-x-1/3" />
-                <div className="absolute bottom-0 right-1/4 w-60 h-60 rounded-full bg-accent/5 blur-3xl translate-y-1/2" />
+                <span className="hidden sm:block text-sm font-medium text-foreground">{firstName}</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 rounded-xl">
+              <div className="px-3 py-2">
+                <p className="text-sm font-semibold text-foreground">{user?.name || firstName}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
               </div>
-            </section>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive gap-2">
+                <LogOut className="w-4 h-4" />
+                Выйти
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
-            {/* Stats Row */}
-            <section className="grid grid-cols-3 gap-3 sm:gap-5 mb-10 sm:mb-14">
-              {[
-                { icon: BookOpen, value: completedCount, label: 'Пройдено', color: 'primary' },
-                { icon: Target, value: 21 - completedCount, label: 'Осталось', color: 'accent' },
-                { icon: Trophy, value: 3, label: 'Недели', color: 'success' },
-              ].map((stat, index) => (
-                <div 
-                  key={stat.label}
-                  className="group relative bg-card rounded-2xl p-4 sm:p-5 border border-border/50 shadow-soft hover:shadow-medium transition-all duration-300 animate-fade-in-up card-hover"
-                  style={{ animationDelay: `${100 + index * 50}ms` }}
+      <main className="container mx-auto px-4 py-6 sm:py-8 max-w-4xl">
+
+        {/* ════════════════════════════════════════
+            HERO — inspired by the 21day landing
+        ════════════════════════════════════════ */}
+        <section className="relative overflow-hidden rounded-3xl mb-8 sm:mb-10 animate-fade-in-up">
+          {/* Gradient background */}
+          <div className="gradient-hero absolute inset-0" />
+
+          {/* Decorative blobs */}
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-white/10 blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+          <div className="absolute bottom-0 left-1/3 w-64 h-64 rounded-full bg-white/10 blur-2xl translate-y-1/3 pointer-events-none" />
+
+          {/* Decorative grid dots */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)',
+            backgroundSize: '32px 32px'
+          }} />
+
+          <div className="relative px-6 sm:px-10 py-10 sm:py-14">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 border border-white/25 backdrop-blur-sm mb-6">
+              <Sparkles className="w-3.5 h-3.5 text-white" />
+              <span className="text-xs font-semibold text-white tracking-wide">
+                Добро пожаловать, {firstName}!
+              </span>
+            </div>
+
+            <div className="max-w-xl">
+              <h1 className="font-extrabold text-4xl sm:text-5xl text-white leading-[1.1] mb-4 tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                Освойте{' '}
+                <span className="text-white/90 underline decoration-white/30 underline-offset-4">
+                  искусственный интеллект
+                </span>
+                {' '}за 21 день
+              </h1>
+
+              <p className="text-white/75 text-base sm:text-lg leading-relaxed mb-8 max-w-md">
+                Практический курс для помогающих специалистов. 15 минут в день — и вы автоматизируете рутину, увеличите охваты и освободите время для клиентов.
+              </p>
+
+              {/* CTA */}
+              {nextLesson ? (
+                <button
+                  onClick={() => setSelectedLessonId(nextLesson.id)}
+                  className="group inline-flex items-center gap-3 bg-white text-primary font-bold px-7 py-3.5 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.03] transition-all duration-300 text-base"
                 >
-                  <div className={`
-                    w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-3
-                    ${stat.color === 'primary' ? 'bg-primary/10' : ''}
-                    ${stat.color === 'accent' ? 'bg-accent/10' : ''}
-                    ${stat.color === 'success' ? 'bg-success/10' : ''}
-                  `}>
-                    <stat.icon className={`
-                      w-5 h-5 sm:w-6 sm:h-6
-                      ${stat.color === 'primary' ? 'text-primary' : ''}
-                      ${stat.color === 'accent' ? 'text-accent' : ''}
-                      ${stat.color === 'success' ? 'text-success' : ''}
-                    `} />
-                  </div>
-                  <p className="text-2xl sm:text-3xl font-serif font-semibold text-foreground mb-1">
-                    {stat.value}
-                  </p>
-                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">
-                    {stat.label}
-                  </p>
+                  <Play className="w-4.5 h-4.5 fill-primary" style={{ width: '18px', height: '18px' }} />
+                  {completedCount === 0 ? 'Начать обучение' : 'Продолжить'}
+                  <span className="font-normal text-primary/70">— День {nextLesson.day}</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+              ) : (
+                <div className="inline-flex items-center gap-3 bg-white/20 border border-white/30 text-white font-semibold px-7 py-3.5 rounded-2xl backdrop-blur-sm">
+                  <Trophy className="w-5 h-5" />
+                  Все уроки пройдены! 🎉
                 </div>
-              ))}
-            </section>
+              )}
+            </div>
+          </div>
 
-            {/* Course Content */}
-            <section>
-              <div className="flex items-center gap-3 mb-6">
-                <h2 className="font-serif text-heading text-foreground">
-                  Программа курса
-                </h2>
-                <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+          {/* ── Stats strip at bottom of hero (like landing page) ── */}
+          <div className="relative border-t border-white/15 px-6 sm:px-10 py-5 grid grid-cols-4 gap-2">
+            {[
+              { value: `${completedCount}`, sup: '/21', label: 'Пройдено' },
+              { value: '21', sup: '', label: 'День практики' },
+              { value: '15', sup: ' мин', label: 'В день' },
+              { value: '70+', sup: '', label: 'Промптов' },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <p className="text-xl sm:text-2xl font-extrabold text-white leading-none" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  {stat.value}<span className="text-white/60 text-sm font-semibold">{stat.sup}</span>
+                </p>
+                <p className="text-white/55 text-[11px] sm:text-xs font-medium mt-1">{stat.label}</p>
               </div>
+            ))}
+          </div>
+        </section>
 
-              <div className="space-y-4 sm:space-y-6">
-                {courseData.map((week, index) => (
-                  <WeekCard 
-                    key={week.id}
-                    week={week}
-                    onSelectLesson={setSelectedLessonId}
-                    defaultOpen={index === 0}
-                    isLessonPublished={isLessonPublished}
-                    isDataLoading={isLessonsLoading || isProgressLoading}
+        {/* ── Progress bar card ── */}
+        {completedCount > 0 && (
+          <section className="mb-8 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+            <div className="bg-card rounded-2xl border border-border/50 shadow-soft px-6 py-4 flex items-center gap-5">
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Target className="w-5.5 h-5.5 text-primary" style={{ width: '22px', height: '22px' }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-semibold text-foreground">Общий прогресс курса</span>
+                  <span className="text-sm font-bold text-primary">{progressPercentage}%</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full gradient-hero rounded-full transition-all duration-700 ease-out"
+                    style={{ width: `${progressPercentage}%` }}
                   />
-                ))}
-              </div>
-            </section>
-
-            {/* Practical Materials Section */}
-            <section className="mt-10 sm:mt-14">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                  <Play className="w-5 h-5 text-accent" />
                 </div>
-                <h2 className="font-serif text-heading text-foreground">
-                  Практические материалы
-                </h2>
-                <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
               </div>
-              <PracticalMaterials />
-            </section>
-          </>
+              <div className="flex-shrink-0 text-right hidden sm:block">
+                <p className="text-2xl font-extrabold text-foreground leading-none" style={{ fontFamily: 'Outfit, sans-serif' }}>{completedCount}</p>
+                <p className="text-xs text-muted-foreground font-medium">из 21</p>
+              </div>
+            </div>
+          </section>
         )}
+
+        {/* ── Course Content ── */}
+        <section className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <BookOpen className="text-primary" style={{ width: '16px', height: '16px' }} />
+            </div>
+            <h2 className="font-serif text-xl sm:text-2xl font-semibold text-foreground">
+              Программа курса
+            </h2>
+            <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+          </div>
+
+          <div className="space-y-3 sm:space-y-4">
+            {courseData.map((week, index) => (
+              <WeekCard
+                key={week.id}
+                week={week}
+                onSelectLesson={setSelectedLessonId}
+                defaultOpen={index === 0}
+                isLessonPublished={isLessonPublished}
+                isDataLoading={isLessonsLoading || isProgressLoading}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* ── Practical Materials ── */}
+        <section className="mt-10 sm:mt-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+              <Play className="text-accent" style={{ width: '16px', height: '16px' }} />
+            </div>
+            <h2 className="font-serif text-xl sm:text-2xl font-semibold text-foreground">
+              Практические материалы
+            </h2>
+            <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+          </div>
+          <PracticalMaterials />
+        </section>
+
+        <div className="h-8" />
       </main>
     </div>
   );

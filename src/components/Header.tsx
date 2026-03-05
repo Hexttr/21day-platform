@@ -6,13 +6,9 @@ import { usePublishedLessons } from '@/hooks/usePublishedLessons';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { 
-  Sparkles, 
   LogOut, 
-  Menu,
   Eye,
   X,
-  Bot,
-  ImageIcon,
   RefreshCw
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
@@ -128,17 +124,17 @@ export function Header({ onNavigateHome }: HeaderProps) {
         >
           <div className="relative">
             <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center shadow-glow transition-transform group-hover:scale-105">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
+              <span className="text-white font-extrabold text-sm tracking-tight">21</span>
             </div>
             {/* Decorative ring */}
             <div className="absolute -inset-1 rounded-xl border border-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <div className="hidden sm:block">
-            <h1 className="font-serif text-lg font-semibold text-foreground leading-none">
-              Neuro<span className="text-primary">Academy</span>
+            <h1 className="font-extrabold text-lg text-foreground leading-none tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              21<span className="text-primary">DAY</span>
             </h1>
-            <p className="text-[11px] text-muted-foreground font-medium tracking-wide uppercase mt-0.5">
-              21-дневный курс
+            <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase mt-0.5">
+              Курс по ИИ
             </p>
           </div>
         </button>
