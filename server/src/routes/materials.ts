@@ -16,7 +16,15 @@ export async function materialsRoutes(app: FastifyInstance) {
       .from(practicalMaterials)
       .where(eq(practicalMaterials.isPublished, true))
       .orderBy(asc(practicalMaterials.sortOrder));
-    return reply.send(rows);
+    // Deduplicate by videoUrl (import may have created duplicates)
+    const seen = new Set<string>();
+    const unique = rows.filter((r) => {
+      const key = (r.videoUrl || '').trim() || r.title;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return reply.send(unique);
   });
 
   // Admin: get all materials

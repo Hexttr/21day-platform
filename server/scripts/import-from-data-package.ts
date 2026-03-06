@@ -74,16 +74,20 @@ async function main() {
     console.log(`Imported ${lessonsUpdated} lessons`);
   }
 
-  // Practical materials
+  // Practical materials (skip duplicates by videoUrl)
   const existingMaterials = await db.select().from(practicalMaterials);
+  const existingVideoUrls = new Set(existingMaterials.map((m) => (m.videoUrl || '').trim()).filter(Boolean));
   const maxOrder = existingMaterials.length ? Math.max(...existingMaterials.map((m) => m.sortOrder)) : -1;
   let sortOrder = maxOrder + 1;
 
   for (const m of materials) {
+    const videoUrl = String(m.videoUrl || '').trim();
+    if (!videoUrl || existingVideoUrls.has(videoUrl)) continue;
+    existingVideoUrls.add(videoUrl);
     await db.insert(practicalMaterials).values({
       title: (m.title as string) || 'Unknown',
       description: (m.description as string) ?? null,
-      videoUrl: (m.videoUrl as string) || '',
+      videoUrl,
       previewUrl: (m.previewUrl as string) ?? null,
       sortOrder: Number(m.sortOrder) ?? sortOrder++,
       isPublished: m.isPublished === true,
