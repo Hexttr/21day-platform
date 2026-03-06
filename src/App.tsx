@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProgressProvider } from "@/contexts/ProgressContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
+import { BalanceProvider } from "@/contexts/BalanceContext";
 import { ChatContextProvider } from "@/contexts/ChatContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -20,6 +21,8 @@ import AdminMaterials from "./pages/admin/AdminMaterials";
 import AdminStudents from "./pages/admin/AdminStudents";
 import AdminCodes from "./pages/admin/AdminCodes";
 import AdminWaitlist from "./pages/admin/AdminWaitlist";
+import AdminBilling from "./pages/admin/AdminBilling";
+import TopUp from "./pages/TopUp";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,6 +85,7 @@ const App = () => (
     <AuthProvider>
       <ImpersonationProvider>
         <ProgressProvider>
+          <BalanceProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -116,6 +120,14 @@ const App = () => (
                   element={
                     <AppLayout>
                       <NanoBanana />
+                    </AppLayout>
+                  }
+                />
+                <Route
+                  path="/topup"
+                  element={
+                    <AppLayout>
+                      <TopUp />
                     </AppLayout>
                   }
                 />
@@ -171,11 +183,22 @@ const App = () => (
                     </AppLayout>
                   }
                 />
+                <Route
+                  path="/admin/billing"
+                  element={
+                    <AppLayout>
+                      <AdminRoute>
+                        <AdminBilling />
+                      </AdminRoute>
+                    </AppLayout>
+                  }
+                />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
+          </BalanceProvider>
         </ProgressProvider>
       </ImpersonationProvider>
     </AuthProvider>

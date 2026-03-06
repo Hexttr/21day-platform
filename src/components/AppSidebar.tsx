@@ -1,8 +1,9 @@
-import { Users, Ticket, Play, ClipboardList, LogOut, BookOpen, X, Trash2 } from "lucide-react";
+import { Users, Ticket, Play, ClipboardList, LogOut, BookOpen, X, Trash2, DollarSign } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatContext } from "@/contexts/ChatContext";
 import { useProgress } from "@/contexts/ProgressContext";
+import { BalanceWidget } from "@/components/BalanceWidget";
 import {
   Sidebar,
   SidebarContent,
@@ -45,6 +46,7 @@ const adminItems = [
   { title: "Студенты", url: "/admin/students", icon: Users },
   { title: "Пригл. коды", url: "/admin/codes", icon: Ticket },
   { title: "Лист ожидания", url: "/admin/waitlist", icon: ClipboardList },
+  { title: "Биллинг и модели", url: "/admin/billing", icon: DollarSign },
 ];
 
 export function AppSidebar() {
@@ -103,6 +105,13 @@ export function AppSidebar() {
               </div>
               <p className="text-[10px] text-muted-foreground mt-1.5 font-medium">{completedCount} из 21 уроков</p>
             </div>
+          </div>
+        )}
+
+        {/* ── Balance widget ── */}
+        {!collapsed && (
+          <div className="px-3 pb-2">
+            <BalanceWidget />
           </div>
         )}
 

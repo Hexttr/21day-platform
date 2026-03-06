@@ -3,13 +3,17 @@ import { ImageIcon, Send, Loader2, Upload, X, Download, Sparkles } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { ModelSelector } from '@/components/ModelSelector';
+import { useBalance } from '@/contexts/BalanceContext';
 
 export function ImageGenerator() {
   const [prompt, setPrompt] = useState('');
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { refreshBalance } = useBalance();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -54,7 +58,7 @@ export function ImageGenerator() {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({ prompt: prompt.trim(), image: sourceImage }),
+        body: JSON.stringify({ prompt: prompt.trim(), image: sourceImage, modelId: selectedModelId }),
       });
 
       const data = await response.json();
@@ -67,6 +71,7 @@ export function ImageGenerator() {
       if (data.imageUrl) {
         setGeneratedImage(data.imageUrl);
         toast.success('Изображение сгенерировано!');
+        refreshBalance();
       } else {
         throw new Error('Не удалось получить изображение');
       }
@@ -206,9 +211,12 @@ export function ImageGenerator() {
             )}
           </Button>
         </div>
-        <p className="text-center text-xs text-muted-foreground/60 mt-2">
-          Enter — сгенерировать, Shift+Enter — новая строка
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <ModelSelector type="image" selectedModelId={selectedModelId} onSelect={setSelectedModelId} />
+          <p className="text-xs text-muted-foreground/60">
+            Enter — сгенерировать, Shift+Enter — новая строка
+          </p>
+        </div>
       </div>
     </div>
   );

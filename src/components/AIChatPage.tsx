@@ -5,6 +5,9 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useChatContext } from '@/contexts/ChatContext';
+import { ModelSelector } from '@/components/ModelSelector';
+import { useBalance } from '@/contexts/BalanceContext';
+import { BalanceWidget } from '@/components/BalanceWidget';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -33,9 +36,11 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatContext = useChatContext();
+  const { refreshBalance } = useBalance();
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -97,7 +102,7 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({ messages: newMessages, model }),
+        body: JSON.stringify({ messages: newMessages, model, modelId: selectedModelId }),
       });
 
       if (response.status === 429) { toast.error('Превышен лимит запросов. Попробуйте позже.'); setIsLoading(false); return; }
@@ -156,6 +161,7 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
           }
         }
       }
+      refreshBalance();
     } catch (error) {
       console.error('AI chat error:', error);
       toast.error('Ошибка при отправке сообщения');
@@ -201,17 +207,20 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
               </p>
             </div>
           </div>
-          {messages.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearChat}
-              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Очистить</span>
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <BalanceWidget compact />
+            {messages.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearChat}
+                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Очистить</span>
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -348,9 +357,12 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
               )}
             </Button>
           </div>
-          <p className="text-center text-xs text-muted-foreground/60 mt-2">
-            Enter — отправить, Shift+Enter — новая строка
-          </p>
+          <div className="flex items-center justify-between mt-2">
+            <ModelSelector type="text" selectedModelId={selectedModelId} onSelect={setSelectedModelId} />
+            <p className="text-xs text-muted-foreground/60">
+              Enter — отправить, Shift+Enter — новая строка
+            </p>
+          </div>
         </div>
       </div>
     </div>
