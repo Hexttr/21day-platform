@@ -42,6 +42,7 @@ interface StudentProgress {
   user_id: string;
   email: string;
   name: string;
+  role: 'admin' | 'student';
   completed_lessons: number;
   quiz_completed: number;
   invitation_code_comment: string | null;
@@ -80,12 +81,12 @@ export default function AdminStudents() {
     setLoadingStudents(true);
     try {
       const data = await api<Array<{
-        user_id: string; email: string; name: string;
+        user_id: string; email: string; name: string; role: 'admin' | 'student';
         completed_lessons: number; quiz_completed: number;
         invitation_code_comment: string | null; is_blocked: boolean;
       }>>('/admin/users');
       const studentData: StudentProgress[] = data.map((u) => ({
-        user_id: u.user_id, email: u.email, name: u.name,
+        user_id: u.user_id, email: u.email, name: u.name, role: u.role || 'student',
         completed_lessons: u.completed_lessons, quiz_completed: u.quiz_completed,
         invitation_code_comment: u.invitation_code_comment, is_blocked: u.is_blocked
       }));
@@ -280,8 +281,15 @@ export default function AdminStudents() {
                         Заблокирован
                       </span>
                     )}
-                    {student.invitation_code_comment && (
-                      <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium flex-shrink-0">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                      student.role === 'admin' 
+                        ? 'bg-primary/10 text-primary' 
+                        : 'bg-secondary text-muted-foreground'
+                    }`}>
+                      {student.role === 'admin' ? 'Админ' : 'Студент'}
+                    </span>
+                    {student.invitation_code_comment && student.role === 'student' && student.invitation_code_comment !== 'Первый админ' && (
+                      <span className="text-xs px-2 py-0.5 bg-muted/50 text-muted-foreground rounded-full font-medium flex-shrink-0">
                         {student.invitation_code_comment}
                       </span>
                     )}

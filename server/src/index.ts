@@ -17,7 +17,7 @@ import { codesRoutes } from './routes/codes.js';
 import { adminRoutes } from './routes/admin.js';
 import { aiRoutes } from './routes/ai.js';
 import { db } from './db/index.js';
-import { lessonContent } from './db/schema.js';
+import { lessonContent, practicalMaterials } from './db/schema.js';
 import { eq } from 'drizzle-orm';
 import { getAuthFromRequest } from './lib/auth.js';
 
@@ -129,6 +129,42 @@ async function main() {
     } else {
       await db.insert(lessonContent).values({ lessonId, videoPreviewUrls: newUrls });
     }
+    return reply.send({ url });
+  });
+
+  // Upload preview for practical material
+  app.post('/api/admin/materials/upload-preview', async (req, reply) => {
+    const payload = getAuthFromRequest(req);
+    if (!payload || payload.role !== 'admin') {
+      return reply.status(403).send({ error: 'Требуются права администратора' });
+    }
+    let materialId = '';
+    let buffer: Buffer | null = null;
+    let originalFilename = '';
+    const parts = req.parts();
+    for await (const part of parts) {
+      if (part.type === 'field' && part.fieldname === 'materialId') {
+        materialId = (part as { value: string }).value;
+      } else if (part.type === 'file' && part.fieldname === 'file') {
+        originalFilename = part.filename || '';
+        buffer = await part.toBuffer();
+      }
+    }
+    if (!materialId || !buffer) {
+      return reply.status(400).send({ error: 'materialId и file обязательны' });
+    }
+    const ext = (originalFilename.match(/\.(jpe?g|png|webp)$/i) || [])[1]?.toLowerCase() || 'jpg';
+    const fs = await import('fs/promises');
+    const uploadsDir = join(UPLOADS_DIR, 'previews');
+    await fs.mkdir(uploadsDir, { recursive: true });
+    const base = originalFilename
+      ? originalFilename.replace(/^.*[\\/]/, '').replace(/[<>:"/\\|?*]/g, '_').replace(/\.(jpe?g|png|webp)$/gi, '') || 'preview'
+      : 'preview';
+    const filename = `material-${materialId}-${base}-${Date.now()}.${ext}`;
+    const filepath = join(uploadsDir, filename);
+    await fs.writeFile(filepath, buffer);
+    const url = `/uploads/previews/${filename}`;
+    await db.update(practicalMaterials).set({ previewUrl: url }).where(eq(practicalMaterials.id, materialId));
     return reply.send({ url });
   });
 

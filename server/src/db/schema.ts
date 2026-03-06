@@ -77,6 +77,7 @@ export const practicalMaterials = pgTable('practical_materials', {
   title: text('title').notNull(),
   description: text('description'),
   videoUrl: text('video_url').notNull(),
+  previewUrl: text('preview_url'),
   sortOrder: integer('sort_order').notNull().default(0),
   isPublished: boolean('is_published').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

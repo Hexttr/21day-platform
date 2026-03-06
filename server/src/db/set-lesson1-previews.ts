@@ -14,12 +14,12 @@ import { lessonContent } from './schema.js';
 import { eq } from 'drizzle-orm';
 
 const PREVIEW_URLS = [
-  '/uploads/previews/lesson-1-v0-preview-1.png',
-  '/uploads/previews/lesson-1-v1-preview-2.png',
-  '/uploads/previews/lesson-1-v2-preview-3.png',
-  '/uploads/previews/lesson-1-v3-preview-4.png',
-  '/uploads/previews/lesson-1-v4-preview-5.png',
-  '/uploads/previews/lesson-1-v5-preview-6.png',
+  '/uploads/previews/lesson-1-v0-preview-1.webp',
+  '/uploads/previews/lesson-1-v1-preview-2.webp',
+  '/uploads/previews/lesson-1-v2-preview-3.webp',
+  '/uploads/previews/lesson-1-v3-preview-4.webp',
+  '/uploads/previews/lesson-1-v4-preview-5.webp',
+  '/uploads/previews/lesson-1-v5-preview-6.webp',
 ];
 
 async function main() {

@@ -51,7 +51,7 @@ export async function materialsRoutes(app: FastifyInstance) {
   // Admin: update material
   app.put<{
     Params: { id: string };
-    Body: { title?: string; description?: string; videoUrl?: string; sortOrder?: number; isPublished?: boolean };
+    Body: { title?: string; description?: string; videoUrl?: string; previewUrl?: string; sortOrder?: number; isPublished?: boolean };
   }>('/admin/materials/:id', async (req, reply) => {
     const payload = getAuthFromRequest(req);
     if (!payload || payload.role !== 'admin') {
@@ -65,6 +65,7 @@ export async function materialsRoutes(app: FastifyInstance) {
         ...(data.title !== undefined && { title: data.title }),
         ...(data.description !== undefined && { description: data.description }),
         ...(data.videoUrl !== undefined && { videoUrl: data.videoUrl }),
+        ...(data.previewUrl !== undefined && { previewUrl: data.previewUrl }),
         ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
         ...(data.isPublished !== undefined && { isPublished: data.isPublished }),
       })

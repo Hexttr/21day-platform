@@ -263,7 +263,7 @@ export function Dashboard() {
                 key={week.id}
                 week={week}
                 onSelectLesson={setSelectedLessonId}
-                defaultOpen={index === 0}
+                defaultOpen={false}
                 isLessonPublished={isLessonPublished}
                 isDataLoading={isLessonsLoading || isProgressLoading}
               />
@@ -274,8 +274,8 @@ export function Dashboard() {
         {/* ── Practical Materials ── */}
         <section className="mt-10 sm:mt-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-              <Play className="text-accent" style={{ width: '16px', height: '16px' }} />
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Play className="text-primary" style={{ width: '16px', height: '16px' }} />
             </div>
             <h2 className="font-serif text-xl sm:text-2xl font-semibold text-foreground">
               Практические материалы

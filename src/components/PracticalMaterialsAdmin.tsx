@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '@/api/client';
+import { api, apiUpload, getUploadUrl } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +13,8 @@ import {
   Video,
   Eye,
   EyeOff,
+  ImagePlus,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -21,6 +23,7 @@ interface PracticalMaterial {
   title: string;
   description: string | null;
   video_url: string;
+  preview_url: string | null;
   sort_order: number;
   is_published: boolean;
 }
@@ -29,6 +32,7 @@ export function PracticalMaterialsAdmin() {
   const [materials, setMaterials] = useState<PracticalMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [uploadingPreviewId, setUploadingPreviewId] = useState<string | null>(null);
 
   useEffect(() => {
     loadMaterials();
@@ -36,8 +40,8 @@ export function PracticalMaterialsAdmin() {
 
   const loadMaterials = async () => {
     try {
-      const data = await api<Array<{ id: string; title: string; description: string | null; videoUrl: string; sortOrder: number; isPublished: boolean }>>('/admin/materials');
-      setMaterials(data.map(m => ({ id: m.id, title: m.title, description: m.description, video_url: m.videoUrl, sort_order: m.sortOrder, is_published: m.isPublished })));
+      const data = await api<Array<{ id: string; title: string; description: string | null; videoUrl: string; previewUrl?: string | null; sortOrder: number; isPublished: boolean }>>('/admin/materials');
+      setMaterials(data.map(m => ({ id: m.id, title: m.title, description: m.description, video_url: m.videoUrl, preview_url: m.previewUrl ?? null, sort_order: m.sortOrder, is_published: m.isPublished })));
     } catch (error) {
       console.error('Error loading materials:', error);
       toast.error('Ошибка загрузки материалов');
@@ -53,7 +57,7 @@ export function PracticalMaterialsAdmin() {
         method: 'POST',
         body: { title: 'Новый материал', videoUrl: '', sortOrder: maxOrder + 1, isPublished: false }
       });
-      setMaterials([...materials, { id: data.id, title: data.title, description: data.description, video_url: data.videoUrl, sort_order: data.sortOrder, is_published: data.isPublished }]);
+      setMaterials([...materials, { id: data.id, title: data.title, description: data.description, video_url: data.videoUrl, preview_url: (data as { previewUrl?: string | null }).previewUrl ?? null, sort_order: data.sortOrder, is_published: data.isPublished }]);
       toast.success('Материал добавлен');
     } catch (error) {
       console.error('Error adding material:', error);
@@ -70,7 +74,7 @@ export function PracticalMaterialsAdmin() {
     try {
       await api(`/admin/materials/${material.id}`, {
         method: 'PUT',
-        body: { title: material.title, description: material.description, videoUrl: material.video_url, sortOrder: material.sort_order, isPublished: material.is_published }
+        body: { title: material.title, description: material.description, videoUrl: material.video_url, previewUrl: material.preview_url || undefined, sortOrder: material.sort_order, isPublished: material.is_published }
       });
       toast.success('Сохранено');
     } catch (error) {
@@ -78,6 +82,43 @@ export function PracticalMaterialsAdmin() {
       toast.error('Ошибка сохранения');
     } finally {
       setSaving(null);
+    }
+  };
+
+  const handlePreviewUpload = async (materialId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files?.length) return;
+    const file = event.target.files[0];
+    if (!file.type.startsWith('image/')) { toast.error('Загрузите изображение (JPG, PNG, WebP)'); return; }
+    setUploadingPreviewId(materialId);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('materialId', materialId);
+      const { url } = await apiUpload('/admin/materials/upload-preview', formData) as { url: string };
+      updateMaterial(materialId, { preview_url: url });
+      toast.success('Превью загружено!');
+    } catch (error) {
+      console.error('Error uploading preview:', error);
+      toast.error('Ошибка загрузки превью');
+    } finally {
+      setUploadingPreviewId(null);
+      event.target.value = '';
+    }
+  };
+
+  const removePreview = async (materialId: string) => {
+    const m = materials.find(x => x.id === materialId);
+    if (!m) return;
+    updateMaterial(materialId, { preview_url: null });
+    try {
+      await api(`/admin/materials/${materialId}`, {
+        method: 'PUT',
+        body: { title: m.title, description: m.description, videoUrl: m.video_url, previewUrl: null, sortOrder: m.sort_order, isPublished: m.is_published }
+      });
+      toast.success('Превью удалено');
+    } catch {
+      updateMaterial(materialId, { preview_url: m.preview_url });
+      toast.error('Ошибка');
     }
   };
 
@@ -117,8 +158,8 @@ export function PracticalMaterialsAdmin() {
 
       {materials.length === 0 ? (
         <div className="bg-card rounded-2xl border border-border/50 shadow-soft p-12 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mb-5">
-            <Video className="w-8 h-8 text-accent" />
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+            <Video className="w-8 h-8 text-primary" />
           </div>
           <p className="font-serif text-lg font-semibold text-foreground mb-2">Нет материалов</p>
           <p className="text-sm text-muted-foreground mb-5">Добавьте первый практический видео-материал</p>
@@ -134,8 +175,8 @@ export function PracticalMaterialsAdmin() {
               {/* Card header */}
               <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-border/50 bg-secondary/20">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                    <Video className="w-3.5 h-3.5 text-accent" />
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Video className="w-3.5 h-3.5 text-primary" />
                   </div>
                   <span className="text-sm font-medium text-foreground truncate max-w-[200px] sm:max-w-xs">
                     {material.title || 'Без названия'}
@@ -156,7 +197,20 @@ export function PracticalMaterialsAdmin() {
                   </div>
                   <Switch
                     checked={material.is_published}
-                    onCheckedChange={(checked) => updateMaterial(material.id, { is_published: checked })}
+                    onCheckedChange={async (checked) => {
+                      const updated = { ...material, is_published: checked };
+                      updateMaterial(material.id, { is_published: checked });
+                      try {
+                        await api(`/admin/materials/${material.id}`, {
+                          method: 'PUT',
+                          body: { title: updated.title, description: updated.description, videoUrl: updated.video_url, previewUrl: updated.preview_url || undefined, sortOrder: updated.sort_order, isPublished: checked }
+                        });
+                        toast.success(checked ? 'Опубликовано' : 'Скрыто');
+                      } catch {
+                        updateMaterial(material.id, { is_published: !checked });
+                        toast.error('Ошибка сохранения');
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -175,7 +229,7 @@ export function PracticalMaterialsAdmin() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium flex items-center gap-2">
-                      <Video className="w-3.5 h-3.5 text-accent" />
+                      <Video className="w-3.5 h-3.5 text-primary" />
                       Ссылка на видео
                     </Label>
                     <Input
@@ -184,6 +238,47 @@ export function PracticalMaterialsAdmin() {
                       placeholder="https://youtube.com/... или vimeo.com/..."
                       className="rounded-xl bg-secondary/30 border-border/50 focus:border-primary"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Превью</Label>
+                    <div className="flex gap-3 items-center">
+                      <div className="relative w-20 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0 flex items-center justify-center group">
+                        {material.preview_url ? (
+                          <img src={getUploadUrl(material.preview_url)} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <ImagePlus className="w-5 h-5 text-muted-foreground/50" />
+                        )}
+                        <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors opacity-0 group-hover:opacity-100">
+                          {uploadingPreviewId === material.id ? (
+                            <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          ) : (
+                            <ImagePlus className="w-5 h-5 text-white" />
+                          )}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={(e) => handlePreviewUpload(material.id, e)}
+                            className="hidden"
+                            disabled={uploadingPreviewId !== null}
+                          />
+                        </label>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {material.preview_url ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removePreview(material.id)}
+                            className="text-muted-foreground hover:text-destructive h-8"
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Удалить превью
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Нажмите на область для загрузки</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

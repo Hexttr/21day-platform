@@ -15,6 +15,13 @@
       "when": 1772779515189,
       "tag": "0001_useful_pyro",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772850000000,
+      "tag": "0002_practical_preview",
+      "breakpoints": true
     }
   ]
 }
