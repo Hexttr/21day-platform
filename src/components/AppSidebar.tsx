@@ -1,5 +1,5 @@
 import { Users, Ticket, Play, ClipboardList, LogOut, BookOpen, X, Trash2, DollarSign } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatContext } from "@/contexts/ChatContext";
 import { useProgress } from "@/contexts/ProgressContext";
@@ -50,12 +50,15 @@ const adminItems = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const { isAdmin, user, signOut } = useAuth();
   const chatContext = useChatContext();
   const { getCompletedCount, getProgressPercentage } = useProgress();
   const location = useLocation();
+  const navigate = useNavigate();
   const collapsed = state === "collapsed";
+
+  const goHome = () => { navigate('/'); setOpenMobile(false); };
 
   const completedCount = getCompletedCount();
   const progressPercentage = getProgressPercentage();
@@ -66,14 +69,14 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 pb-3">
         {!collapsed ? (
           <div className="flex items-center gap-2 w-full">
-            <NavLink to="/" className="flex items-center gap-3 group flex-1 min-w-0">
+            <button onClick={goHome} className="flex items-center gap-3 group flex-1 min-w-0">
               <div className="w-11 h-11 rounded-xl gradient-hero flex items-center justify-center shadow-glow flex-shrink-0">
                 <span className="text-white font-extrabold text-lg tracking-tight">21</span>
               </div>
               <span className="font-extrabold text-black text-2xl tracking-tight leading-none" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 DAY
               </span>
-            </NavLink>
+            </button>
             <SidebarTrigger className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-foreground rounded-lg" />
           </div>
         ) : (
@@ -92,7 +95,7 @@ export function AppSidebar() {
         {/* ── Progress pill (expanded) ── */}
         {!collapsed && (
           <div className="px-3 pb-2">
-            <div className="p-3 rounded-xl bg-primary/8 border border-primary/15" style={{ background: 'hsl(263 52% 50% / 0.07)' }}>
+            <button onClick={goHome} className="w-full text-left p-3 rounded-xl bg-primary/8 border border-primary/15 hover:bg-primary/12 transition-colors cursor-pointer" style={{ background: 'hsl(263 52% 50% / 0.07)' }}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold text-foreground">Мой прогресс</span>
                 <span className="text-xs font-bold text-primary">{progressPercentage}%</span>
@@ -104,7 +107,7 @@ export function AppSidebar() {
                 />
               </div>
               <p className="text-[10px] text-muted-foreground mt-1.5 font-medium">{completedCount} из 21 уроков</p>
-            </div>
+            </button>
           </div>
         )}
 
