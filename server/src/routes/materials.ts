@@ -37,13 +37,13 @@ export async function materialsRoutes(app: FastifyInstance) {
     if (!payload || payload.role !== 'admin') {
       return reply.status(403).send({ error: 'Требуются права администратора' });
     }
-    const { title, description, videoUrl, sortOrder = 0, isPublished = false } = req.body || {};
-    if (!title?.trim() || !videoUrl?.trim()) {
-      return reply.status(400).send({ error: 'title и videoUrl обязательны' });
+    const { title, description, videoUrl = '', sortOrder = 0, isPublished = false } = req.body || {};
+    if (!title?.trim()) {
+      return reply.status(400).send({ error: 'title обязателен' });
     }
     const [row] = await db
       .insert(practicalMaterials)
-      .values({ title: title.trim(), description: description?.trim() || null, videoUrl: videoUrl.trim(), sortOrder, isPublished })
+      .values({ title: title.trim(), description: description?.trim() || null, videoUrl: String(videoUrl || '').trim() || '', sortOrder, isPublished })
       .returning();
     return reply.send(row);
   });

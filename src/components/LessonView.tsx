@@ -287,7 +287,7 @@ export function LessonView({ lesson, onBack, onNavigateToLesson, isLessonPublish
                           <div className="absolute inset-0 bg-gradient-to-br from-secondary/50 to-muted" />
                         )}
                         <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
-                          <div className="w-14 h-14 rounded-full bg-primary/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform opacity-90 group-hover:opacity-100">
+                          <div className="w-14 h-14 rounded-full bg-primary/90 flex items-center justify-center shadow-lg ring-2 ring-white/90 group-hover:scale-110 transition-transform opacity-90 group-hover:opacity-100">
                             <Play className="w-6 h-6 text-primary-foreground ml-1" fill="currentColor" />
                           </div>
                         </div>
@@ -393,9 +393,11 @@ export function LessonView({ lesson, onBack, onNavigateToLesson, isLessonPublish
 
           {/* Additional Materials */}
           {lessonContent?.additional_materials && (
-            <div className="mt-4 p-5 rounded-xl bg-accent/5 border border-accent/20">
-              <h3 className="font-medium text-foreground mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-accent" />
+            <div className="mt-4 p-5 rounded-xl bg-primary/5 border border-primary/20">
+              <h3 className="font-medium text-foreground mb-2 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-primary" />
+                </div>
                 Дополнительные материалы
               </h3>
               <p className="text-muted-foreground whitespace-pre-line">
@@ -441,8 +443,8 @@ export function LessonView({ lesson, onBack, onNavigateToLesson, isLessonPublish
       <div className="bg-card rounded-2xl sm:rounded-3xl border border-border/50 shadow-soft overflow-hidden mb-6">
         <div className="p-6 sm:p-8">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-              <ListChecks className="w-5 h-5 text-accent" />
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <ListChecks className="w-5 h-5 text-primary" />
             </div>
             <h2 className="font-serif text-lg font-semibold text-foreground">
               Практическое задание
@@ -503,7 +505,7 @@ export function LessonView({ lesson, onBack, onNavigateToLesson, isLessonPublish
             variant="outline"
             size="lg"
             onClick={() => onNavigateToLesson(lesson.id + 1)}
-            className="flex-1 h-14 rounded-xl font-semibold text-base border-border/50 hover:bg-secondary/50"
+            className="flex-1 h-14 rounded-xl font-semibold text-base border-2 border-primary/40 hover:border-primary hover:bg-primary/10"
           >
             Следующий урок
             <ChevronRight className="w-5 h-5 ml-2" />
