@@ -5,8 +5,8 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash';
 const GEMINI_CHAT_FALLBACKS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
 const GEMINI_CHAT_URL = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent`;
-const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.0-flash-preview-image-generation';
-const GEMINI_IMAGE_FALLBACKS = ['gemini-2.0-flash-exp'];
+const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image';
+const GEMINI_IMAGE_FALLBACKS = ['nano-banana-pro-preview', 'gemini-3.1-flash-image-preview'];
 
 export async function aiRoutes(app: FastifyInstance) {
   // Health check (no auth) - verify AI routes are loaded
