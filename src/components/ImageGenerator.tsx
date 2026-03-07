@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ImageIcon, Loader2, Upload, X, Download, MessageSquare } from 'lucide-react';
+import { ImageIcon, Loader2, Upload, Download, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ import { useBalance } from '@/contexts/BalanceContext';
 import { useChatContext } from '@/contexts/ChatContext';
 import { resizeImageForUpload, resizeForStorage } from '@/lib/imageUtils';
 import { putFullImage, getFullImage } from '@/lib/imageStore';
+import { ImageUploadPanel } from '@/components/ImageUploadPanel';
 
 const STORAGE_KEY = 'ai-chat-nanobanana';
 const MAX_IMAGES = 14;
@@ -33,7 +34,6 @@ export function ImageGenerator() {
   const [sourceImages, setSourceImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { refreshBalance } = useBalance();
@@ -41,7 +41,7 @@ export function ImageGenerator() {
 
   const starterPrompts = [
     'Сгенерируй кота на велосипеде в стиле акварели',
-    'Сделай кинематографичный портрет девушки в неоновом городе',
+    'Сделай кинематографичный портрет девушки',
     'Создай минималистичный логотип для AI-студии',
     'Нарисуй уютную кофейню в японском стиле',
   ];
@@ -128,7 +128,6 @@ export function ImageGenerator() {
     localStorage.removeItem(STORAGE_KEY);
     setMessages([]);
     setSourceImages([]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
     toast.success('Чат очищен');
   }, []);
 
@@ -137,46 +136,11 @@ export function ImageGenerator() {
     return () => chatContext?.unregisterClearHandler('nanobanana');
   }, [chatContext, clearChat]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files?.length) return;
-    const remaining = MAX_IMAGES - sourceImages.length;
-    if (remaining <= 0) {
-      toast.error(`Максимум ${MAX_IMAGES} изображений`);
-      return;
-    }
-    const toAdd: File[] = [];
-    for (let i = 0; i < Math.min(files.length, remaining); i++) {
-      const f = files[i];
-      if (!f.type.startsWith('image/')) {
-        toast.error(`Формат не поддерживается: ${f.name}. Используйте PNG, JPEG, WebP`);
-        continue;
-      }
-      if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        toast.error(`${f.name} слишком большой (макс. ${MAX_FILE_SIZE_MB}MB)`);
-        continue;
-      }
-      toAdd.push(f);
-    }
-    const reader = (file: File) =>
-      new Promise<string>((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result as string);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
-    Promise.all(toAdd.map(reader)).then((urls) => {
-      setSourceImages((prev) => [...prev, ...urls].slice(0, MAX_IMAGES));
-    }).catch(() => toast.error('Ошибка загрузки'));
-    e.target.value = '';
-  };
-
   const removeSourceImage = (idx?: number) => {
     if (idx !== undefined) {
       setSourceImages((prev) => prev.filter((_, i) => i !== idx));
     } else {
       setSourceImages([]);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -270,7 +234,7 @@ export function ImageGenerator() {
                     setPrompt(suggestion);
                     textareaRef.current?.focus();
                   }}
-                  className="text-left px-4 py-3.5 rounded-xl bg-white border-2 border-border shadow-md hover:shadow-lg hover:border-primary/40 hover:bg-primary/5 text-sm font-medium text-foreground transition-all duration-200 group"
+                  className="text-left px-4 py-3.5 rounded-xl bg-card border border-border/60 shadow-soft hover:shadow-md hover:border-primary/40 hover:bg-primary/5 text-sm font-medium text-foreground transition-all duration-200 group"
                 >
                   <span className="text-primary group-hover:text-primary mr-2">→</span>
                   {suggestion}
@@ -358,88 +322,77 @@ export function ImageGenerator() {
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 bg-card rounded-2xl border border-border/50 shadow-soft p-4">
-        {sourceImages.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2 p-3 rounded-xl bg-secondary/30 border border-border/50">
-            {sourceImages.map((url, i) => (
-              <div key={i} className="relative flex-shrink-0">
-                <img src={url} alt="" className="w-14 h-14 rounded-lg object-cover border border-border/50" />
-                <button
-                  onClick={() => removeSourceImage(i)}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-            <p className="text-sm text-muted-foreground self-center">
-              {sourceImages.length} из {MAX_IMAGES} изображений. Опишите задачу.
-            </p>
+      <ImageUploadPanel
+        images={sourceImages}
+        onChange={setSourceImages}
+        disabled={isLoading}
+        maxImages={MAX_IMAGES}
+        maxFileSizeMb={MAX_FILE_SIZE_MB}
+        allowedTypes={ALLOWED_TYPES}
+        previewSummary={(
+          <p className="text-sm text-muted-foreground self-center">
+            {sourceImages.length} из {MAX_IMAGES} изображений. Опишите задачу.
+          </p>
+        )}
+        footer={(
+          <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+            <ModelSelector type="image" selectedModelId={selectedModelId} onSelect={setSelectedModelId} />
+            <div className="flex items-center gap-3">
+              {willUseLastImage && (
+                <span className="text-xs text-primary/80 font-medium">Будет использовано последнее изображение</span>
+              )}
+              <p className="text-xs text-muted-foreground/60">
+                PNG, JPEG, WebP до {MAX_FILE_SIZE_MB}MB. Enter — сгенерировать, drag&drop — загрузить
+              </p>
+            </div>
           </div>
         )}
+      >
+        {({ openFilePicker }) => (
+          <div className="flex gap-3 items-end">
+            <Button
+              onClick={openFilePicker}
+              variant="outline"
+              size="icon"
+              className="h-[52px] w-[52px] shrink-0 rounded-xl border-border/50 hover:border-primary/40"
+              disabled={isLoading}
+              title={`Прикрепить изображения (макс. ${MAX_IMAGES}, до ${MAX_FILE_SIZE_MB}MB)`}
+            >
+              <Upload className="w-4.5 h-4.5" style={{ width: '18px', height: '18px' }} />
+            </Button>
 
-        <div className="flex gap-3 items-end">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ALLOWED_TYPES.join(',')}
-            multiple
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            variant="outline"
-            size="icon"
-            className="h-[52px] w-[52px] shrink-0 rounded-xl border-border/50 hover:border-primary/40"
-            disabled={isLoading}
-            title={`Прикрепить изображения (макс. ${MAX_IMAGES}, до ${MAX_FILE_SIZE_MB}MB)`}
-          >
-            <Upload className="w-4.5 h-4.5" style={{ width: '18px', height: '18px' }} />
-          </Button>
+            <Textarea
+              ref={textareaRef}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                sourceImages.length
+                  ? 'Опишите изменения или коллаж...'
+                  : willUseLastImage
+                    ? 'Редактировать последнее изображение (например: добавь Карлссона)...'
+                    : 'Опишите, что хотите создать...'
+              }
+              className="min-h-[52px] max-h-[120px] resize-none rounded-xl bg-secondary/30 border-border/50 focus:border-primary text-sm flex-1"
+              disabled={isLoading}
+              rows={1}
+            />
 
-          <Textarea
-            ref={textareaRef}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              sourceImages.length
-                ? 'Опишите изменения или коллаж...'
-                : willUseLastImage
-                  ? 'Редактировать последнее изображение (например: добавь Карлссона)...'
-                  : 'Опишите, что хотите создать...'
-            }
-            className="min-h-[52px] max-h-[120px] resize-none rounded-xl bg-secondary/30 border-border/50 focus:border-primary text-sm flex-1"
-            disabled={isLoading}
-            rows={1}
-          />
-
-          <Button
-            onClick={generateImage}
-            disabled={!prompt.trim() || isLoading}
-            size="icon"
-            className="h-[52px] w-[52px] min-w-[52px] shrink-0 rounded-xl gradient-hero hover:opacity-90 shadow-glow disabled:opacity-50 disabled:shadow-none"
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <ImageIcon className="w-5 h-5" />
-            )}
-          </Button>
-        </div>
-        <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
-          <ModelSelector type="image" selectedModelId={selectedModelId} onSelect={setSelectedModelId} />
-          <div className="flex items-center gap-3">
-            {willUseLastImage && (
-              <span className="text-xs text-primary/80 font-medium">Будет использовано последнее изображение</span>
-            )}
-            <p className="text-xs text-muted-foreground/60">
-              PNG, JPEG, WebP до {MAX_FILE_SIZE_MB}MB. Enter — сгенерировать
-            </p>
+            <Button
+              onClick={generateImage}
+              disabled={!prompt.trim() || isLoading}
+              size="icon"
+              className="h-[52px] w-[52px] min-w-[52px] shrink-0 rounded-xl gradient-hero hover:opacity-90 shadow-glow disabled:opacity-50 disabled:shadow-none"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <ImageIcon className="w-5 h-5" />
+              )}
+            </Button>
           </div>
-        </div>
-      </div>
+        )}
+      </ImageUploadPanel>
     </div>
   );
 }

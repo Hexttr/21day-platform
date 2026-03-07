@@ -45,7 +45,21 @@ export class GeminiAdapter implements AIProviderAdapter {
       .filter((message) => message.role !== 'system')
       .map((message) => ({
         role: message.role === 'user' ? 'user' : 'model',
-        parts: [{ text: message.content }],
+        parts: [
+          ...(message.content.trim() ? [{ text: message.content }] : []),
+          ...((message.images || []).map((image) => {
+            const base64 = String(image).replace(/^data:image\/\w+;base64,/, '');
+            const mime = image.startsWith('data:image/')
+              ? (image.match(/^data:(image\/\w+);/)?.[1] || 'image/png')
+              : 'image/png';
+            return {
+              inlineData: {
+                mimeType: mime,
+                data: base64,
+              },
+            };
+          })),
+        ],
       }));
 
     const response = await fetch(geminiStreamUrl(params.model.modelKey), {

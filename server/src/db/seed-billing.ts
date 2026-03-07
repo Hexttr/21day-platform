@@ -14,22 +14,35 @@ import { db } from './index.js';
 import { aiProviders, aiModels, platformSettings } from './schema.js';
 
 async function seedBilling() {
-  // Seed Gemini provider
   const existingProviders = await db.select().from(aiProviders);
-  let geminiProvider = existingProviders.find(p => p.name === 'gemini');
+  const providersByName = new Map(existingProviders.map((provider) => [provider.name, provider]));
 
-  if (!geminiProvider) {
-    const [row] = await db.insert(aiProviders).values({
-      name: 'gemini',
-      displayName: 'Google Gemini',
-      apiKeyEnv: 'GEMINI_API_KEY',
+  async function ensureProvider(name: string, displayName: string, apiKeyEnv: string | null) {
+    const existing = providersByName.get(name);
+    if (!existing) {
+      const [row] = await db.insert(aiProviders).values({
+        name,
+        displayName,
+        apiKeyEnv,
+        isActive: true,
+      }).returning();
+      providersByName.set(name, row);
+      console.log(`Created provider: ${displayName}`);
+      return row;
+    }
+
+    const [updated] = await db.update(aiProviders).set({
+      displayName,
+      apiKeyEnv,
       isActive: true,
-    }).returning();
-    geminiProvider = row;
-    console.log('Created Gemini provider');
-  } else {
-    console.log('Gemini provider already exists');
+    }).where(eq(aiProviders.id, existing.id)).returning();
+    providersByName.set(name, updated);
+    console.log(`Provider already exists: ${displayName}`);
+    return updated;
   }
+
+  const geminiProvider = await ensureProvider('gemini', 'Google Gemini', 'GEMINI_API_KEY');
+  const groqProvider = await ensureProvider('groq', 'Groq', 'GROQ_API_KEY');
 
   // Seed models (prices in RUB, approximate based on Google pricing * markup)
   const existingModels = await db.select().from(aiModels);
@@ -40,7 +53,7 @@ async function seedBilling() {
       displayName: 'Gemini 2.5 Flash',
       modelType: 'text' as const,
       supportsStreaming: true,
-      supportsImageInput: false,
+      supportsImageInput: true,
       supportsImageOutput: false,
       supportsSystemPrompt: true,
       inputPricePer1k: '0.005',    // ~0.005 RUB per 1K input tokens
@@ -48,13 +61,14 @@ async function seedBilling() {
       fixedPrice: '0',
       sortOrder: 1,
       isActive: true,
+      providerName: 'gemini',
     },
     {
       modelKey: 'gemini-2.5-pro',
       displayName: 'Gemini 2.5 Pro',
       modelType: 'text' as const,
       supportsStreaming: true,
-      supportsImageInput: false,
+      supportsImageInput: true,
       supportsImageOutput: false,
       supportsSystemPrompt: true,
       inputPricePer1k: '0.020',
@@ -62,13 +76,14 @@ async function seedBilling() {
       fixedPrice: '0',
       sortOrder: 2,
       isActive: true,
+      providerName: 'gemini',
     },
     {
       modelKey: 'gemini-2.5-flash-lite',
       displayName: 'Gemini 2.5 Flash Lite',
       modelType: 'text' as const,
       supportsStreaming: true,
-      supportsImageInput: false,
+      supportsImageInput: true,
       supportsImageOutput: false,
       supportsSystemPrompt: true,
       inputPricePer1k: '0.002',
@@ -76,13 +91,14 @@ async function seedBilling() {
       fixedPrice: '0',
       sortOrder: 3,
       isActive: true,
+      providerName: 'gemini',
     },
     {
       modelKey: 'gemini-2.0-flash',
       displayName: 'Gemini 2.0 Flash',
       modelType: 'text' as const,
       supportsStreaming: true,
-      supportsImageInput: false,
+      supportsImageInput: true,
       supportsImageOutput: false,
       supportsSystemPrompt: true,
       inputPricePer1k: '0.003',
@@ -90,13 +106,14 @@ async function seedBilling() {
       fixedPrice: '0',
       sortOrder: 4,
       isActive: true,
+      providerName: 'gemini',
     },
     {
       modelKey: 'gemini-1.5-flash',
       displayName: 'Gemini 1.5 Flash',
       modelType: 'text' as const,
       supportsStreaming: true,
-      supportsImageInput: false,
+      supportsImageInput: true,
       supportsImageOutput: false,
       supportsSystemPrompt: true,
       inputPricePer1k: '0.002',
@@ -104,6 +121,82 @@ async function seedBilling() {
       fixedPrice: '0',
       sortOrder: 99,
       isActive: false,
+      providerName: 'gemini',
+    },
+    {
+      modelKey: 'llama-3.1-8b-instant',
+      displayName: 'Groq Llama 3.1 8B Instant',
+      modelType: 'text' as const,
+      supportsStreaming: true,
+      supportsImageInput: false,
+      supportsImageOutput: false,
+      supportsSystemPrompt: true,
+      inputPricePer1k: '0',
+      outputPricePer1k: '0',
+      fixedPrice: '0',
+      sortOrder: 20,
+      isActive: true,
+      providerName: 'groq',
+    },
+    {
+      modelKey: 'llama-3.3-70b-versatile',
+      displayName: 'Groq Llama 3.3 70B',
+      modelType: 'text' as const,
+      supportsStreaming: true,
+      supportsImageInput: false,
+      supportsImageOutput: false,
+      supportsSystemPrompt: true,
+      inputPricePer1k: '0',
+      outputPricePer1k: '0',
+      fixedPrice: '0',
+      sortOrder: 21,
+      isActive: true,
+      providerName: 'groq',
+    },
+    {
+      modelKey: 'openai/gpt-oss-20b',
+      displayName: 'Groq GPT OSS 20B',
+      modelType: 'text' as const,
+      supportsStreaming: true,
+      supportsImageInput: false,
+      supportsImageOutput: false,
+      supportsSystemPrompt: true,
+      inputPricePer1k: '0',
+      outputPricePer1k: '0',
+      fixedPrice: '0',
+      sortOrder: 22,
+      isActive: true,
+      providerName: 'groq',
+    },
+    {
+      modelKey: 'openai/gpt-oss-120b',
+      displayName: 'Groq GPT OSS 120B',
+      modelType: 'text' as const,
+      supportsStreaming: true,
+      supportsImageInput: false,
+      supportsImageOutput: false,
+      supportsSystemPrompt: true,
+      inputPricePer1k: '0',
+      outputPricePer1k: '0',
+      fixedPrice: '0',
+      sortOrder: 23,
+      isActive: true,
+      providerName: 'groq',
+    },
+    {
+      modelKey: 'qwen/qwen3-32b',
+      displayName: 'Groq Qwen3 32B',
+      modelType: 'text' as const,
+      supportsStreaming: true,
+      supportsImageInput: false,
+      supportsImageOutput: false,
+      supportsSystemPrompt: true,
+      inputPricePer1k: '0',
+      outputPricePer1k: '0',
+      fixedPrice: '0',
+      sortOrder: 24,
+      isActive: true,
+      providerName: 'groq',
     },
     // Image models (Gemini Image first = default, NanoBanana stays available)
     {
@@ -119,6 +212,7 @@ async function seedBilling() {
       fixedPrice: '2.00',
       sortOrder: 10,
       isActive: true,
+      providerName: 'gemini',
     },
     {
       modelKey: 'gemini-3-pro-image-preview',
@@ -133,6 +227,7 @@ async function seedBilling() {
       fixedPrice: '3.00',
       sortOrder: 11,
       isActive: true,
+      providerName: 'gemini',
     },
   ];
 
@@ -157,28 +252,31 @@ async function seedBilling() {
 
   let modelsCreated = 0;
   for (const seed of modelSeeds) {
+    const { providerName, ...modelSeed } = seed;
     const exists = existingModels.find(m =>
       m.modelKey === seed.modelKey || (seed.modelKey === 'gemini-3-pro-image-preview' && m.modelKey === 'nano-banana-pro-preview')
     );
+    const providerId = providerName === 'groq' ? groqProvider.id : geminiProvider.id;
     if (!exists) {
       await db.insert(aiModels).values({
-        providerId: geminiProvider!.id,
-        ...seed,
+        providerId,
+        ...modelSeed,
       });
       modelsCreated++;
     } else {
       await db.update(aiModels).set({
-        displayName: seed.displayName,
-        modelType: seed.modelType,
-        supportsStreaming: seed.supportsStreaming,
-        supportsImageInput: seed.supportsImageInput,
-        supportsImageOutput: seed.supportsImageOutput,
-        supportsSystemPrompt: seed.supportsSystemPrompt,
-        inputPricePer1k: seed.inputPricePer1k,
-        outputPricePer1k: seed.outputPricePer1k,
-        fixedPrice: seed.fixedPrice,
-        sortOrder: seed.sortOrder,
-        isActive: seed.isActive,
+        providerId,
+        displayName: modelSeed.displayName,
+        modelType: modelSeed.modelType,
+        supportsStreaming: modelSeed.supportsStreaming,
+        supportsImageInput: modelSeed.supportsImageInput,
+        supportsImageOutput: modelSeed.supportsImageOutput,
+        supportsSystemPrompt: modelSeed.supportsSystemPrompt,
+        inputPricePer1k: modelSeed.inputPricePer1k,
+        outputPricePer1k: modelSeed.outputPricePer1k,
+        fixedPrice: modelSeed.fixedPrice,
+        sortOrder: modelSeed.sortOrder,
+        isActive: modelSeed.isActive,
         updatedAt: new Date(),
       }).where(eq(aiModels.id, exists.id));
     }

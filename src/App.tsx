@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,18 +13,21 @@ import { ChatContextProvider } from "@/contexts/ChatContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppFooter } from "@/components/AppFooter";
-import Index from "./pages/Index";
-import ChatGPT from "./pages/ChatGPT";
-import Gemini from "./pages/Gemini";
-import NanoBanana from "./pages/NanoBanana";
-import NotFound from "./pages/NotFound";
-import AdminLessons from "./pages/admin/AdminLessons";
-import AdminMaterials from "./pages/admin/AdminMaterials";
-import AdminStudents from "./pages/admin/AdminStudents";
-import AdminCodes from "./pages/admin/AdminCodes";
-import AdminWaitlist from "./pages/admin/AdminWaitlist";
-import AdminBilling from "./pages/admin/AdminBilling";
-import TopUp from "./pages/TopUp";
+
+const Index = React.lazy(() => import("./pages/Index"));
+const ChatGPT = React.lazy(() => import("./pages/ChatGPT"));
+const Gemini = React.lazy(() => import("./pages/Gemini"));
+const Groq = React.lazy(() => import("./pages/Groq"));
+const EdgeTTS = React.lazy(() => import("./pages/EdgeTTS"));
+const NanoBanana = React.lazy(() => import("./pages/NanoBanana"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
+const AdminLessons = React.lazy(() => import("./pages/admin/AdminLessons"));
+const AdminMaterials = React.lazy(() => import("./pages/admin/AdminMaterials"));
+const AdminStudents = React.lazy(() => import("./pages/admin/AdminStudents"));
+const AdminCodes = React.lazy(() => import("./pages/admin/AdminCodes"));
+const AdminWaitlist = React.lazy(() => import("./pages/admin/AdminWaitlist"));
+const AdminBilling = React.lazy(() => import("./pages/admin/AdminBilling"));
+const TopUp = React.lazy(() => import("./pages/TopUp"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +41,12 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const RouteFallback = () => (
+  <div className="min-h-[40vh] flex items-center justify-center">
+    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+  </div>
+);
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -91,112 +101,130 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <Routes>
-                <Route
-                  path="/"
-                  element={
-                    <AppLayout>
-                      <Index />
-                    </AppLayout>
-                  }
-                />
-                <Route
-                  path="/chatgpt"
-                  element={
-                    <AppLayout>
-                      <ChatGPT />
-                    </AppLayout>
-                  }
-                />
-                <Route
-                  path="/gemini"
-                  element={
-                    <AppLayout>
-                      <Gemini />
-                    </AppLayout>
-                  }
-                />
-                <Route
-                  path="/nanobanana"
-                  element={
-                    <AppLayout>
-                      <NanoBanana />
-                    </AppLayout>
-                  }
-                />
-                <Route
-                  path="/topup"
-                  element={
-                    <AppLayout>
-                      <TopUp />
-                    </AppLayout>
-                  }
-                />
-                {/* Admin routes */}
-                <Route path="/admin" element={<Navigate to="/admin/lessons" replace />} />
-                <Route
-                  path="/admin/lessons"
-                  element={
-                    <AppLayout>
-                      <AdminRoute>
-                        <AdminLessons />
-                      </AdminRoute>
-                    </AppLayout>
-                  }
-                />
-                <Route
-                  path="/admin/materials"
-                  element={
-                    <AppLayout>
-                      <AdminRoute>
-                        <AdminMaterials />
-                      </AdminRoute>
-                    </AppLayout>
-                  }
-                />
-                <Route
-                  path="/admin/students"
-                  element={
-                    <AppLayout>
-                      <AdminRoute>
-                        <AdminStudents />
-                      </AdminRoute>
-                    </AppLayout>
-                  }
-                />
-                <Route
-                  path="/admin/codes"
-                  element={
-                    <AppLayout>
-                      <AdminRoute>
-                        <AdminCodes />
-                      </AdminRoute>
-                    </AppLayout>
-                  }
-                />
-                <Route
-                  path="/admin/waitlist"
-                  element={
-                    <AppLayout>
-                      <AdminRoute>
-                        <AdminWaitlist />
-                      </AdminRoute>
-                    </AppLayout>
-                  }
-                />
-                <Route
-                  path="/admin/billing"
-                  element={
-                    <AppLayout>
-                      <AdminRoute>
-                        <AdminBilling />
-                      </AdminRoute>
-                    </AppLayout>
-                  }
-                />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <React.Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  <Route
+                    path="/"
+                    element={
+                      <AppLayout>
+                        <Index />
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/chatgpt"
+                    element={
+                      <AppLayout>
+                        <ChatGPT />
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/gemini"
+                    element={
+                      <AppLayout>
+                        <Gemini />
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/groq"
+                    element={
+                      <AppLayout>
+                        <Groq />
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/edge-tts"
+                    element={
+                      <AppLayout>
+                        <EdgeTTS />
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/nanobanana"
+                    element={
+                      <AppLayout>
+                        <NanoBanana />
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/topup"
+                    element={
+                      <AppLayout>
+                        <TopUp />
+                      </AppLayout>
+                    }
+                  />
+                  {/* Admin routes */}
+                  <Route path="/admin" element={<Navigate to="/admin/lessons" replace />} />
+                  <Route
+                    path="/admin/lessons"
+                    element={
+                      <AppLayout>
+                        <AdminRoute>
+                          <AdminLessons />
+                        </AdminRoute>
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/admin/materials"
+                    element={
+                      <AppLayout>
+                        <AdminRoute>
+                          <AdminMaterials />
+                        </AdminRoute>
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/admin/students"
+                    element={
+                      <AppLayout>
+                        <AdminRoute>
+                          <AdminStudents />
+                        </AdminRoute>
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/admin/codes"
+                    element={
+                      <AppLayout>
+                        <AdminRoute>
+                          <AdminCodes />
+                        </AdminRoute>
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/admin/waitlist"
+                    element={
+                      <AppLayout>
+                        <AdminRoute>
+                          <AdminWaitlist />
+                        </AdminRoute>
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/admin/billing"
+                    element={
+                      <AppLayout>
+                        <AdminRoute>
+                          <AdminBilling />
+                        </AdminRoute>
+                      </AppLayout>
+                    }
+                  />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </React.Suspense>
             </BrowserRouter>
           </TooltipProvider>
           </BalanceProvider>

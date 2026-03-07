@@ -156,7 +156,7 @@ export const aiUsageLog = pgTable('ai_usage_log', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   modelId: uuid('model_id').references(() => aiModels.id),
-  requestType: text('request_type', { enum: ['chat', 'image', 'quiz'] }).notNull(),
+  requestType: text('request_type', { enum: ['chat', 'image', 'quiz', 'tts'] }).notNull(),
   inputTokens: integer('input_tokens').default(0),
   outputTokens: integer('output_tokens').default(0),
   baseCost: numeric('base_cost', { precision: 10, scale: 6 }).default('0'),

@@ -1,6 +1,7 @@
 export interface AIChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  images?: string[];
 }
 
 export interface AIUsage {

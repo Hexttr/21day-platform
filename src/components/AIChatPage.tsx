@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Send, Loader2, Sparkles, Trash2, Bot, MessageSquare } from 'lucide-react';
+import { Send, Loader2, Sparkles, Trash2, Bot, MessageSquare, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useChatContext } from '@/contexts/ChatContext';
-import { ModelSelector } from '@/components/ModelSelector';
+import { AIModel, ModelSelector } from '@/components/ModelSelector';
 import { useBalance } from '@/contexts/BalanceContext';
 import { BalanceWidget } from '@/components/BalanceWidget';
+import { ImageUploadPanel } from '@/components/ImageUploadPanel';
 
 type Message = {
-  role: 'user' | 'assistant';
+  role: 'user';
+  content: string;
+  sourceImages?: string[];
+} | {
+  role: 'assistant';
   content: string;
 };
 
@@ -37,10 +42,19 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName }: A
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
+  const [sourceImages, setSourceImages] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatContext = useChatContext();
   const { refreshBalance } = useBalance();
+  const canAttachImages = Boolean(selectedModel?.supportsImageInput);
+
+  useEffect(() => {
+    if (!canAttachImages && sourceImages.length > 0) {
+      setSourceImages([]);
+    }
+  }, [canAttachImages, sourceImages.length]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -64,7 +78,7 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName }: A
   useEffect(() => {
     if (messages.length > 0) {
       const storageKey = getChatStorageKey(modelName);
-      localStorage.setItem(storageKey, JSON.stringify(messages));
+      localStorage.setItem(storageKey, JSON.stringify(messages.map(({ role, content }) => ({ role, content }))));
     }
   }, [messages, modelName]);
 
@@ -72,6 +86,7 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName }: A
     const storageKey = getChatStorageKey(modelName);
     localStorage.removeItem(storageKey);
     setMessages([]);
+    setSourceImages([]);
     toast.success('Чат очищен');
   }, [modelName]);
 
@@ -84,11 +99,16 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName }: A
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: input.trim() };
+    const userMessage: Message = {
+      role: 'user',
+      content: input.trim(),
+      ...(sourceImages.length > 0 && { sourceImages: [...sourceImages] }),
+    };
     const newMessages = [...messages, userMessage];
 
     setMessages(newMessages);
     setInput('');
+    setSourceImages([]);
     setIsLoading(true);
 
     let assistantContent = '';
@@ -102,7 +122,14 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName }: A
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({ messages: newMessages, modelId: selectedModelId }),
+        body: JSON.stringify({
+          modelId: selectedModelId,
+          messages: newMessages.map((message) => ({
+            role: message.role,
+            content: message.content,
+            images: message.role === 'user' ? message.sourceImages : undefined,
+          })),
+        }),
       });
 
       if (response.status === 429) { toast.error('Превышен лимит запросов. Попробуйте позже.'); setIsLoading(false); return; }
@@ -258,7 +285,7 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName }: A
                   <button
                     key={suggestion}
                     onClick={() => { setInput(suggestion); inputRef.current?.focus(); }}
-                    className="text-left px-4 py-3.5 rounded-xl bg-white border-2 border-border shadow-md hover:shadow-lg hover:border-primary/40 hover:bg-primary/5 text-sm font-medium text-foreground transition-all duration-200 group"
+                    className="text-left px-4 py-3.5 rounded-xl bg-card border border-border/60 shadow-soft hover:shadow-md hover:border-primary/40 hover:bg-primary/5 text-sm font-medium text-foreground transition-all duration-200 group"
                   >
                     <span className="text-primary group-hover:text-primary mr-2">→</span>
                     {suggestion}
@@ -296,7 +323,17 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName }: A
                       <ReactMarkdown>{message.content}</ReactMarkdown>
                     </div>
                   ) : (
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                    <div className="space-y-2">
+                      {message.sourceImages && message.sourceImages.length > 0 && (
+                        <div className="flex gap-1.5 flex-wrap">
+                          {message.sourceImages.slice(0, 6).map((url, imageIndex) => (
+                            <img key={`${url}-${imageIndex}`} src={url} alt="" className="w-11 h-11 rounded object-cover border border-white/30" />
+                          ))}
+                          {message.sourceImages.length > 6 && <span className="text-xs self-center">+{message.sourceImages.length - 6}</span>}
+                        </div>
+                      )}
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                    </div>
                   )}
                 </div>
                 {message.role === 'user' && (
@@ -334,40 +371,117 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName }: A
       {/* Input */}
       <div className="flex-shrink-0 border-t border-border/50 bg-card/80 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto min-[1920px]:max-w-[80%] px-4 py-4">
-          <div className="flex gap-3 items-end">
-            <div className="flex-1 relative chat-input-wrap">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={handleInput}
-                onKeyDown={handleKeyDown}
-                placeholder={`Написать ${modelName}...`}
-                rows={1}
-                className="w-full resize-none rounded-2xl border border-border/50 bg-secondary/30 focus:bg-background px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all min-h-[52px] max-h-40 leading-relaxed overflow-y-auto"
-                disabled={isLoading}
-                autoComplete="off"
-                style={{ height: '52px' }}
-              />
-            </div>
-            <Button
-              onClick={sendMessage}
-              disabled={!input.trim() || isLoading}
-              size="icon"
-              className="h-[52px] w-[52px] min-w-[52px] shrink-0 rounded-2xl gradient-hero hover:opacity-90 shadow-glow transition-all disabled:opacity-50 disabled:shadow-none"
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
+          {canAttachImages ? (
+            <ImageUploadPanel
+              images={sourceImages}
+              onChange={setSourceImages}
+              disabled={isLoading}
+              previewSummary={(
+                <p className="text-sm text-muted-foreground self-center">
+                  {sourceImages.length} вложений. Можно отправить скрин, фото или референс.
+                </p>
               )}
-            </Button>
-          </div>
-          <div className="flex items-center justify-between mt-2">
-            <ModelSelector type="text" selectedModelId={selectedModelId} onSelect={setSelectedModelId} providerName={providerName} />
-            <p className="text-xs text-muted-foreground/60">
-              Enter — отправить, Shift+Enter — новая строка
-            </p>
-          </div>
+              footer={(
+                <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+                  <ModelSelector
+                    type="text"
+                    selectedModelId={selectedModelId}
+                    onSelect={setSelectedModelId}
+                    onModelChange={setSelectedModel}
+                    providerName={providerName}
+                  />
+                  <p className="text-xs text-muted-foreground/60">
+                    Enter — отправить, Shift+Enter — новая строка, drag&drop — вложить изображение
+                  </p>
+                </div>
+              )}
+              className="p-3"
+            >
+              {({ openFilePicker }) => (
+                <div className="flex gap-3 items-end">
+                  <Button
+                    onClick={openFilePicker}
+                    variant="outline"
+                    size="icon"
+                    className="h-[52px] w-[52px] shrink-0 rounded-xl border-border/50 hover:border-primary/40"
+                    disabled={isLoading}
+                    title="Прикрепить изображения"
+                  >
+                    <Upload className="w-4.5 h-4.5" style={{ width: '18px', height: '18px' }} />
+                  </Button>
+                  <div className="flex-1 relative chat-input-wrap">
+                    <textarea
+                      ref={inputRef}
+                      value={input}
+                      onChange={handleInput}
+                      onKeyDown={handleKeyDown}
+                      placeholder={`Написать ${modelName}...`}
+                      rows={1}
+                      className="w-full resize-none rounded-2xl border border-border/50 bg-secondary/30 focus:bg-background px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all min-h-[52px] max-h-40 leading-relaxed overflow-y-auto"
+                      disabled={isLoading}
+                      autoComplete="off"
+                      style={{ height: '52px' }}
+                    />
+                  </div>
+                  <Button
+                    onClick={sendMessage}
+                    disabled={!input.trim() || isLoading}
+                    size="icon"
+                    className="h-[52px] w-[52px] min-w-[52px] shrink-0 rounded-2xl gradient-hero hover:opacity-90 shadow-glow transition-all disabled:opacity-50 disabled:shadow-none"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </Button>
+                </div>
+              )}
+            </ImageUploadPanel>
+          ) : (
+            <>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1 relative chat-input-wrap">
+                  <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={handleInput}
+                    onKeyDown={handleKeyDown}
+                    placeholder={`Написать ${modelName}...`}
+                    rows={1}
+                    className="w-full resize-none rounded-2xl border border-border/50 bg-secondary/30 focus:bg-background px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all min-h-[52px] max-h-40 leading-relaxed overflow-y-auto"
+                    disabled={isLoading}
+                    autoComplete="off"
+                    style={{ height: '52px' }}
+                  />
+                </div>
+                <Button
+                  onClick={sendMessage}
+                  disabled={!input.trim() || isLoading}
+                  size="icon"
+                  className="h-[52px] w-[52px] min-w-[52px] shrink-0 rounded-2xl gradient-hero hover:opacity-90 shadow-glow transition-all disabled:opacity-50 disabled:shadow-none"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </Button>
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <ModelSelector
+                  type="text"
+                  selectedModelId={selectedModelId}
+                  onSelect={setSelectedModelId}
+                  onModelChange={setSelectedModel}
+                  providerName={providerName}
+                />
+                <p className="text-xs text-muted-foreground/60">
+                  Enter — отправить, Shift+Enter — новая строка
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

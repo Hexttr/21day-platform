@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChatContext } from "@/contexts/ChatContext";
 import { useProgress } from "@/contexts/ProgressContext";
 import { BalanceWidget } from "@/components/BalanceWidget";
+import { aiTools, type AIToolConfig } from "@/lib/ai-tools";
 import {
   Sidebar,
   SidebarContent,
@@ -19,27 +20,6 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-
-const toolItems = [
-  { 
-    title: "ChatGPT", url: "/chatgpt", 
-    icon: "/icons/chatgpt.png",
-    hasChat: true,
-    modelPath: "chatgpt"
-  },
-  { 
-    title: "Gemini", url: "/gemini", 
-    icon: "/icons/gemini.png",
-    hasChat: true,
-    modelPath: "gemini"
-  },
-  { 
-    title: "NanoBanana 3 Pro", url: "/nanobanana", 
-    icon: "/icons/banano.png",
-    hasChat: true,
-    modelPath: "nanobanana"
-  },
-];
 
 const adminItems = [
   { title: "Уроки", url: "/admin/lessons", icon: BookOpen },
@@ -67,6 +47,59 @@ export function AppSidebar() {
 
   const completedCount = getCompletedCount();
   const progressPercentage = getProgressPercentage();
+  const freeToolItems = aiTools.filter((item) => item.access === 'free');
+  const paidToolItems = aiTools.filter((item) => item.access === 'paid');
+
+  const renderToolIcon = (item: AIToolConfig) => {
+    if (item.icon) {
+      return (
+        <span className="w-[18px] h-[18px] rounded-[5px] flex items-center justify-center flex-shrink-0 overflow-hidden bg-secondary/50">
+          <img src={item.icon} alt="" className="w-full h-full object-contain" />
+        </span>
+      );
+    }
+
+    return (
+      <span className="w-[18px] h-[18px] rounded-[5px] flex items-center justify-center flex-shrink-0 overflow-hidden bg-secondary/50 text-[13px]">
+        {item.iconEmoji || '•'}
+      </span>
+    );
+  };
+
+  const renderToolMenu = (items: AIToolConfig[]) => (
+    <SidebarMenu>
+      {items.map((item) => {
+        const isActive = location.pathname === item.url;
+        const showTrash = !collapsed && isActive && item.hasChat && item.modelPath;
+
+        return (
+          <SidebarMenuItem key={item.title}>
+            <div className="flex items-center gap-1 w-full group/item">
+              <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="flex-1">
+                <NavLink to={item.url} className="flex items-center gap-3">
+                  {renderToolIcon(item)}
+                  <span className="font-medium">{item.title}</span>
+                </NavLink>
+              </SidebarMenuButton>
+              {showTrash && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    chatContext?.clearChat(item.modelPath!);
+                  }}
+                  className="opacity-60 hover:opacity-100 hover:text-destructive p-1.5 rounded-md transition-colors"
+                  title="Очистить чат"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
+  );
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
@@ -129,39 +162,23 @@ export function AppSidebar() {
             Инструменты ИИ
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {toolItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                const showTrash = !collapsed && isActive && item.hasChat && item.modelPath;
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <div className="flex items-center gap-1 w-full group/item">
-                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="flex-1">
-                        <NavLink to={item.url} className="flex items-center gap-3">
-                          <span className="w-[18px] h-[18px] rounded-[5px] flex items-center justify-center flex-shrink-0 overflow-hidden bg-secondary/50">
-                            <img src={item.icon} alt="" className="w-full h-full object-contain" />
-                          </span>
-                          <span className="font-medium">{item.title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                      {showTrash && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            chatContext?.clearChat(item.modelPath!);
-                          }}
-                          className="opacity-60 hover:opacity-100 hover:text-destructive p-1.5 rounded-md transition-colors"
-                          title="Очистить чат"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            {!collapsed && freeToolItems.length > 0 && (
+              <div className="mb-3">
+                <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600/80">
+                  Бесплатно
+                </p>
+                {renderToolMenu(freeToolItems)}
+              </div>
+            )}
+            {!collapsed && paidToolItems.length > 0 && (
+              <div>
+                <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">
+                  Платно
+                </p>
+                {renderToolMenu(paidToolItems)}
+              </div>
+            )}
+            {collapsed && renderToolMenu([...freeToolItems, ...paidToolItems])}
           </SidebarGroupContent>
         </SidebarGroup>
 

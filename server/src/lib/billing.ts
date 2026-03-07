@@ -162,7 +162,7 @@ export async function creditBalance(userId: string, amount: number, type: 'topup
 export async function logUsage(
   userId: string,
   modelId: string | null,
-  requestType: 'chat' | 'image' | 'quiz',
+  requestType: 'chat' | 'image' | 'quiz' | 'tts',
   cost: UsageCost,
   isFree: boolean
 ): Promise<string> {

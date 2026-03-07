@@ -1,13 +1,17 @@
 import { FastifyInstance, FastifyReply } from 'fastify';
 import { getAuthFromRequest, JwtPayload } from '../lib/auth.js';
-import { checkBilling, calculateCost, deductBalance, logUsage, getMarkupPercent, UsageCost } from '../lib/billing.js';
+import { checkBilling, calculateCost, deductBalance, getBalance, logUsage, getMarkupPercent, UsageCost } from '../lib/billing.js';
 import { getProviderApiKey, getGeminiKey } from '../lib/provider-keys.js';
 import { getProviderAdapter } from '../lib/ai/provider-registry.js';
 import { ensureModelSupports, resolveRuntimeModel } from '../lib/ai/runtime.js';
 import { AIResolvedModel, QuizConversationMessage, QuizLearningState } from '../lib/ai/types.js';
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'edge-tts-node';
 
 const DEFAULT_SYSTEM_PROMPT = 'Ты полезный AI-ассистент. Отвечай на русском языке, если пользователь пишет на русском. Давай четкие и полезные ответы. Используй форматирование Markdown когда это уместно.';
 const MAX_IMAGES = 14;
+const EDGE_TTS_MAX_TEXT_LENGTH = 2000;
+
+type BillingState = Awaited<ReturnType<typeof checkBilling>>;
 
 function requireAuth(req: Parameters<typeof getAuthFromRequest>[0], reply: { status: (code: number) => { send: (body: unknown) => unknown } }): JwtPayload | null {
   const payload = getAuthFromRequest(req);
@@ -40,6 +44,43 @@ async function resolveKeyOrReply(model: AIResolvedModel, reply: FastifyReply): P
     return null;
   }
   return key;
+}
+
+function isModelFree(model: AIResolvedModel): boolean {
+  if (model.modelType === 'image') {
+    return parseMoney(model.fixedPrice) <= 0;
+  }
+
+  return parseMoney(model.inputPricePer1k) <= 0 && parseMoney(model.outputPricePer1k) <= 0;
+}
+
+async function resolveBillingForModel(payload: JwtPayload, model: AIResolvedModel): Promise<BillingState> {
+  if (isModelFree(model)) {
+    return {
+      isFree: false,
+      balance: await getBalance(payload.userId),
+      canProceed: true,
+    };
+  }
+
+  return checkBilling(payload.userId, payload.role === 'admin');
+}
+
+function hasImageAttachments(messages: Array<{ images?: string[] }>): boolean {
+  return messages.some((message) => Array.isArray(message.images) && message.images.length > 0);
+}
+
+function exceedsImageLimit(messages: Array<{ images?: string[] }>): boolean {
+  return messages.some((message) => Array.isArray(message.images) && message.images.length > MAX_IMAGES);
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
 
 async function finalizeUsageBilling(params: {
@@ -92,7 +133,7 @@ export async function aiRoutes(app: FastifyInstance) {
   });
 
   app.post<{
-    Body: { messages: Array<{ role: string; content: string }>; modelId?: string };
+    Body: { messages: Array<{ role: string; content: string; images?: string[] }>; modelId?: string };
   }>('/ai/chat', async (req, reply) => {
     const payload = requireAuth(req, reply);
     if (!payload) return;
@@ -107,10 +148,17 @@ export async function aiRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: parseErrorMessage(error) });
     }
 
+    if (hasImageAttachments(messages) && !model.supportsImageInput) {
+      return reply.status(400).send({ error: `Модель "${model.displayName}" не поддерживает входные изображения` });
+    }
+    if (exceedsImageLimit(messages)) {
+      return reply.status(400).send({ error: `Максимум ${MAX_IMAGES} изображений в одном сообщении` });
+    }
+
     const key = await resolveKeyOrReply(model, reply);
     if (!key) return;
 
-    const billing = await checkBilling(payload.userId, payload.role === 'admin');
+    const billing = await resolveBillingForModel(payload, model);
     if (!billing.canProceed) return reply.status(402).send({ error: 'Недостаточно средств. Пополните баланс.' });
 
     reply.raw.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
@@ -123,6 +171,7 @@ export async function aiRoutes(app: FastifyInstance) {
         messages: messages.map((message) => ({
           role: message.role === 'assistant' ? 'assistant' : message.role === 'system' ? 'system' : 'user',
           content: message.content,
+          images: Array.isArray(message.images) ? message.images.slice(0, MAX_IMAGES) : [],
         })),
         systemPrompt: DEFAULT_SYSTEM_PROMPT,
         onDelta: (text) => writeSseChunk(reply, text),
@@ -160,7 +209,7 @@ export async function aiRoutes(app: FastifyInstance) {
     const key = await resolveKeyOrReply(model, reply);
     if (!key) return;
 
-    const billing = await checkBilling(payload.userId, payload.role === 'admin');
+    const billing = await resolveBillingForModel(payload, model);
     if (!billing.canProceed) return reply.status(402).send({ error: 'Недостаточно средств. Пополните баланс.' });
 
     const imageList = Array.isArray(imagesRaw) ? imagesRaw : (image ? [image] : []);
@@ -219,7 +268,7 @@ export async function aiRoutes(app: FastifyInstance) {
     const key = await resolveKeyOrReply(model, reply);
     if (!key) return;
 
-    const billing = await checkBilling(payload.userId, payload.role === 'admin');
+    const billing = await resolveBillingForModel(payload, model);
     if (!billing.canProceed) return reply.status(402).send({ error: 'Недостаточно средств. Пополните баланс.' });
 
     const { lessonTitle, lessonDescription, videoTopics = [], userAnswer, conversationHistory = [], customPrompt, learningState } = req.body || {};
@@ -256,6 +305,54 @@ export async function aiRoutes(app: FastifyInstance) {
       if (learningState) {
         return reply.send({ response: 'Произошла ошибка обработки. Попробуйте повторить ваш ответ.', learningState, allPassed: false });
       }
+      return reply.status(502).send({ error: parseErrorMessage(error) });
+    }
+  });
+
+  app.post<{
+    Body: {
+      text: string;
+      voice: 'ru-RU-SvetlanaNeural' | 'ru-RU-DmitryNeural';
+      rate?: string;
+    };
+  }>('/ai/tts', async (req, reply) => {
+    const payload = requireAuth(req, reply);
+    if (!payload) return;
+
+    const text = req.body?.text?.trim() || '';
+    const voice = req.body?.voice || 'ru-RU-SvetlanaNeural';
+    const rate = req.body?.rate || '+0%';
+
+    if (!text) {
+      return reply.status(400).send({ error: 'text обязателен' });
+    }
+
+    if (text.length > EDGE_TTS_MAX_TEXT_LENGTH) {
+      return reply.status(400).send({ error: `Текст слишком длинный. Максимум ${EDGE_TTS_MAX_TEXT_LENGTH} символов.` });
+    }
+
+    try {
+      const tts = new MsEdgeTTS({ enableLogger: false });
+      await tts.setMetadata(voice, OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
+      const stream = tts.toStream(escapeXml(text), { rate });
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      tts.close();
+
+      const audioBuffer = Buffer.concat(chunks);
+      await logUsage(payload.userId, null, 'tts', {
+        inputTokens: 0,
+        outputTokens: 0,
+        baseCost: 0,
+        finalCost: 0,
+      }, false);
+
+      return reply.send({
+        audioDataUrl: `data:audio/webm;base64,${audioBuffer.toString('base64')}`,
+      });
+    } catch (error) {
       return reply.status(502).send({ error: parseErrorMessage(error) });
     }
   });
