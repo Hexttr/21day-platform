@@ -36,7 +36,8 @@ const toolItems = [
   { 
     title: "NanoBanana 3 Pro", url: "/nanobanana", 
     icon: "/icons/banano.png",
-    hasChat: false
+    hasChat: true,
+    modelPath: "nanobanana"
   },
 ];
 

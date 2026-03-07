@@ -292,7 +292,7 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
                   }`}
                 >
                   {message.role === 'assistant' ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:font-serif">
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:font-serif prose-headings:text-base prose-pre:text-xs prose-code:text-xs prose-code:bg-secondary/50 prose-code:px-1 prose-code:rounded">
                       <ReactMarkdown>{message.content}</ReactMarkdown>
                     </div>
                   ) : (

@@ -1,53 +1,100 @@
-import React, { useState, useRef } from 'react';
-import { ImageIcon, Send, Loader2, Upload, X, Download, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ImageIcon, Loader2, Upload, X, Download, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { ModelSelector } from '@/components/ModelSelector';
 import { useBalance } from '@/contexts/BalanceContext';
+import { useChatContext } from '@/contexts/ChatContext';
+
+const STORAGE_KEY = 'ai-chat-nanobanana';
+const MAX_STORED_MESSAGES = 20;
+
+type ImageMessage = {
+  role: 'user';
+  content: string;
+  sourceImage?: string;
+} | {
+  role: 'assistant';
+  imageUrl: string;
+};
 
 export function ImageGenerator() {
+  const [messages, setMessages] = useState<ImageMessage[]>([]);
   const [prompt, setPrompt] = useState('');
   const [sourceImage, setSourceImage] = useState<string | null>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { refreshBalance } = useBalance();
+  const chatContext = useChatContext();
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setMessages(parsed);
+      }
+    } catch (e) {
+      console.warn('Failed to parse saved image chat:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const toStore = messages.slice(-MAX_STORED_MESSAGES);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+    }
+  }, [messages]);
+
+  const clearChat = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setMessages([]);
+    setSourceImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    toast.success('Чат очищен');
+  }, []);
+
+  useEffect(() => {
+    chatContext?.registerClearHandler('nanobanana', clearChat);
+    return () => chatContext?.unregisterClearHandler('nanobanana');
+  }, [chatContext, clearChat]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith('image/')) {
       toast.error('Пожалуйста, выберите изображение');
       return;
     }
-
     if (file.size > 10 * 1024 * 1024) {
       toast.error('Изображение слишком большое (макс. 10MB)');
       return;
     }
-
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setSourceImage(event.target?.result as string);
-    };
+    reader.onload = (event) => setSourceImage(event.target?.result as string);
     reader.readAsDataURL(file);
   };
 
   const removeSourceImage = () => {
     setSourceImage(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const generateImage = async () => {
     if (!prompt.trim() || isLoading) return;
 
+    const userMsg: ImageMessage = { role: 'user', content: prompt.trim(), ...(sourceImage && { sourceImage }) };
+    setMessages((prev) => [...prev, userMsg]);
+    setPrompt('');
+    removeSourceImage();
     setIsLoading(true);
-    setGeneratedImage(null);
 
     try {
       const token = localStorage.getItem('token');
@@ -58,7 +105,11 @@ export function ImageGenerator() {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({ prompt: prompt.trim(), image: sourceImage, modelId: selectedModelId }),
+        body: JSON.stringify({
+          prompt: userMsg.content,
+          image: userMsg.role === 'user' && userMsg.sourceImage ? userMsg.sourceImage : undefined,
+          modelId: selectedModelId,
+        }),
       });
 
       const data = await response.json();
@@ -69,7 +120,7 @@ export function ImageGenerator() {
       }
 
       if (data.imageUrl) {
-        setGeneratedImage(data.imageUrl);
+        setMessages((prev) => [...prev, { role: 'assistant', imageUrl: data.imageUrl }]);
         toast.success('Изображение сгенерировано!');
         refreshBalance();
       } else {
@@ -78,20 +129,10 @@ export function ImageGenerator() {
     } catch (error) {
       console.error('Image generation error:', error);
       toast.error(error instanceof Error ? error.message : 'Ошибка генерации изображения');
+      setMessages((prev) => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const downloadImage = () => {
-    if (!generatedImage) return;
-    
-    const link = document.createElement('a');
-    link.href = generatedImage;
-    link.download = `generated-${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -102,64 +143,93 @@ export function ImageGenerator() {
   };
 
   return (
-    <div className="flex flex-col gap-5 py-4">
-      {/* Result or placeholder */}
-      {generatedImage ? (
-        <div className="animate-fade-in-up space-y-4">
-          <div className="relative">
-            <img
-              src={generatedImage}
-              alt="Generated"
-              className="w-full rounded-2xl shadow-large border border-border/50"
-            />
-            <Button
-              onClick={downloadImage}
-              size="sm"
-              variant="secondary"
-              className="absolute top-3 right-3 rounded-xl gap-1.5 shadow-medium backdrop-blur-sm bg-card/80"
-            >
-              <Download className="w-4 h-4" />
-              Скачать
-            </Button>
-          </div>
-          {sourceImage && (
-            <div className="flex items-center gap-3 text-sm text-muted-foreground bg-secondary/30 rounded-xl p-3">
-              <img src={sourceImage} alt="Source" className="w-12 h-12 rounded-lg object-cover border border-border/50" />
-              <span>Исходное изображение</span>
+    <div className="flex flex-col gap-4 py-4 h-full min-h-0">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto min-h-0 space-y-4 -mx-1 px-1">
+        {messages.length === 0 && !isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center bg-card rounded-2xl border border-border/50">
+            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5 shadow-large overflow-hidden bg-card border border-border/50">
+              <img src="/icons/banano.png" alt="" className="w-14 h-14 object-contain" />
             </div>
-          )}
-        </div>
-      ) : (
-        <div className={`flex flex-col items-center justify-center py-16 text-center bg-card rounded-2xl border border-border/50 transition-all ${isLoading ? 'border-primary/30' : ''}`}>
-          {isLoading ? (
-            <>
-              <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5 shadow-large animate-pulse overflow-hidden bg-card border border-border/50">
-                <img src="/icons/banano.png" alt="" className="w-14 h-14 object-contain opacity-80" />
+            <p className="font-serif text-lg font-semibold text-foreground mb-2">Генератор изображений</p>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Опишите, что хотите создать. Можно загрузить фото для редактирования.
+            </p>
+          </div>
+        ) : (
+          messages.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`flex gap-3 animate-fade-in-up ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              {msg.role === 'assistant' && (
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-soft mt-1 overflow-hidden bg-card border border-border/50">
+                  <img src="/icons/banano.png" alt="" className="w-5 h-5 object-contain" />
+                </div>
+              )}
+              <div
+                className={`max-w-[85%] px-4 py-3 rounded-2xl ${
+                  msg.role === 'user'
+                    ? 'gradient-hero text-primary-foreground rounded-br-sm'
+                    : 'bg-card border border-border/50 rounded-bl-sm shadow-soft'
+                }`}
+              >
+                {msg.role === 'user' ? (
+                  <div className="space-y-2">
+                    {msg.sourceImage && (
+                      <div className="flex gap-2 items-center">
+                        <img src={msg.sourceImage} alt="" className="w-12 h-12 rounded-lg object-cover border border-white/30" />
+                        <span className="text-xs opacity-90">Исходное фото</span>
+                      </div>
+                    )}
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <img src={msg.imageUrl} alt="Generated" className="max-w-full rounded-xl max-h-80 object-contain" />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="absolute top-2 right-2 rounded-lg gap-1 shadow-md"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = msg.imageUrl;
+                        link.download = `generated-${Date.now()}.png`;
+                        link.click();
+                      }}
+                    >
+                      <Download className="w-3.5 h-3.5" /> Скачать
+                    </Button>
+                  </div>
+                )}
               </div>
-              <p className="font-serif text-lg font-semibold text-foreground mb-2">Генерирую изображение...</p>
-              <p className="text-sm text-muted-foreground">Это может занять несколько секунд</p>
-              <div className="flex items-center gap-1.5 mt-4">
+              {msg.role === 'user' && (
+                <div className="w-8 h-8 rounded-xl bg-secondary border border-border/50 flex items-center justify-center flex-shrink-0 shadow-soft mt-1">
+                  <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+          ))
+        )}
+        {isLoading && (
+          <div className="flex gap-3 justify-start animate-fade-in">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-soft mt-1 overflow-hidden bg-card border border-border/50">
+              <img src="/icons/banano.png" alt="" className="w-5 h-5 object-contain" />
+            </div>
+            <div className="bg-card border border-border/50 rounded-2xl rounded-bl-sm px-4 py-3 shadow-soft">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
                 <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
                 <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
-            </>
-          ) : (
-            <>
-              <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5 shadow-large overflow-hidden bg-card border border-border/50">
-                <img src="/icons/banano.png" alt="" className="w-14 h-14 object-contain" />
-              </div>
-              <p className="font-serif text-lg font-semibold text-foreground mb-2">Генератор изображений</p>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                Опишите, что хотите создать. Можно загрузить фото для редактирования.
-              </p>
-            </>
-          )}
-        </div>
-      )}
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
 
-      {/* Input area */}
-      <div className="bg-card rounded-2xl border border-border/50 shadow-soft p-4">
+      {/* Input */}
+      <div className="flex-shrink-0 bg-card rounded-2xl border border-border/50 shadow-soft p-4">
         {sourceImage && (
           <div className="mb-3 flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50">
             <div className="relative flex-shrink-0">
@@ -192,8 +262,8 @@ export function ImageGenerator() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={sourceImage ? "Опишите изменения..." : "Опишите, что хотите создать..."}
-            className="min-h-[52px] max-h-[120px] resize-none rounded-xl bg-secondary/30 border-border/50 focus:border-primary text-sm"
+            placeholder={sourceImage ? 'Опишите изменения...' : 'Опишите, что хотите создать...'}
+            className="min-h-[52px] max-h-[120px] resize-none rounded-xl bg-secondary/30 border-border/50 focus:border-primary text-sm flex-1"
             disabled={isLoading}
             rows={1}
           />
