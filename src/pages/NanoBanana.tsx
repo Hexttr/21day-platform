@@ -25,7 +25,7 @@ export default function NanoBanana() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto min-[1920px]:max-w-[80%]">
             <ImageGenerator />
           </div>
         </div>

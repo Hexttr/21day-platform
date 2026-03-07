@@ -62,16 +62,7 @@ async function seedBilling() {
       fixedPrice: '0',
       sortOrder: 3,
     },
-    // Image models
-    {
-      modelKey: 'gemini-2.5-flash-image',
-      displayName: 'Gemini Image',
-      modelType: 'image' as const,
-      inputPricePer1k: '0',
-      outputPricePer1k: '0',
-      fixedPrice: '2.00',          // 2 RUB per image (before markup)
-      sortOrder: 10,
-    },
+    // Image models (NanoBanana Pro first = default)
     {
       modelKey: 'gemini-3-pro-image-preview',
       displayName: 'NanoBanana Pro',
@@ -79,6 +70,15 @@ async function seedBilling() {
       inputPricePer1k: '0',
       outputPricePer1k: '0',
       fixedPrice: '3.00',
+      sortOrder: 10,
+    },
+    {
+      modelKey: 'gemini-2.5-flash-image',
+      displayName: 'Gemini Image',
+      modelType: 'image' as const,
+      inputPricePer1k: '0',
+      outputPricePer1k: '0',
+      fixedPrice: '2.00',          // 2 RUB per image (before markup)
       sortOrder: 11,
     },
   ];
@@ -88,6 +88,18 @@ async function seedBilling() {
   if (oldNanoBanana) {
     await db.update(aiModels).set({ modelKey: 'gemini-3-pro-image-preview', updatedAt: new Date() }).where(eq(aiModels.id, oldNanoBanana.id));
     console.log('Updated NanoBanana Pro modelKey to gemini-3-pro-image-preview');
+  }
+
+  // Make NanoBanana Pro default (sortOrder 10), Gemini Image secondary (11)
+  const allImageModels = await db.select().from(aiModels).where(eq(aiModels.modelType, 'image'));
+  const nanoPro = allImageModels.find(m => m.modelKey === 'gemini-3-pro-image-preview');
+  const geminiImg = allImageModels.find(m => m.modelKey === 'gemini-2.5-flash-image');
+  if (nanoPro && nanoPro.sortOrder !== 10) {
+    await db.update(aiModels).set({ sortOrder: 10, updatedAt: new Date() }).where(eq(aiModels.id, nanoPro.id));
+    console.log('Set NanoBanana Pro as default (sortOrder 10)');
+  }
+  if (geminiImg && geminiImg.sortOrder !== 11) {
+    await db.update(aiModels).set({ sortOrder: 11, updatedAt: new Date() }).where(eq(aiModels.id, geminiImg.id));
   }
 
   let modelsCreated = 0;

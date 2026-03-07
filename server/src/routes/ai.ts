@@ -10,7 +10,8 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const FALLBACK_CHAT_MODEL = 'gemini-2.5-flash';
 const FALLBACK_CHAT_LIST = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 const FALLBACK_IMAGE_MODEL = 'gemini-2.5-flash-image';
-const FALLBACK_IMAGE_LIST = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview'];
+// Try gemini-3-pro-image (no -preview) and gemini-3-pro-image-preview; fallback to working model
+const FALLBACK_IMAGE_LIST = ['gemini-3-pro-image-preview', 'gemini-3-pro-image', 'gemini-2.5-flash-image'];
 
 const GEMINI_STREAM_URL = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent`;
 const GEMINI_GENERATE_URL = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -162,7 +163,10 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const dbModel = await resolveModel(modelId, 'image');
     const modelKey = dbModel?.modelKey || FALLBACK_IMAGE_MODEL;
-    const modelsToTry = dbModel ? [modelKey] : FALLBACK_IMAGE_LIST;
+    // When user selects a model, try it first, then fallback to working model if it fails
+    const modelsToTry = dbModel
+      ? [modelKey, FALLBACK_IMAGE_MODEL].filter((m, i, a) => a.indexOf(m) === i)
+      : FALLBACK_IMAGE_LIST;
 
     const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [
       { text: `Сгенерируй изображение по описанию: ${prompt.trim()}` },
@@ -186,10 +190,17 @@ export async function aiRoutes(app: FastifyInstance) {
       });
       if (res.ok) break;
       lastErr = await res.text();
-      if (res.status !== 404) return reply.status(res.status).send({ error: lastErr || 'AI image error' });
+      // Try next model on any error (404, 500, etc.)
     }
     if (!res || !res.ok) {
-      const msg = (() => { try { const e = JSON.parse(lastErr); return e?.error?.message || e?.error || lastErr; } catch { return lastErr || 'Image model not found'; } })();
+      const msg = (() => {
+        try {
+          const e = JSON.parse(lastErr);
+          return e?.error?.message || e?.error || lastErr;
+        } catch {
+          return lastErr || 'Image model not found';
+        }
+      })();
       return reply.status(502).send({ error: msg });
     }
 

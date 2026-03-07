@@ -231,7 +231,7 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-4 py-6 space-y-6 pb-4">
+        <div className="max-w-3xl mx-auto min-[1920px]:max-w-[80%] px-4 py-6 space-y-6 pb-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[55vh] text-center animate-fade-in-up">
               <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-large overflow-hidden bg-card border border-border/50">
@@ -333,7 +333,7 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
 
       {/* Input */}
       <div className="flex-shrink-0 border-t border-border/50 bg-card/80 backdrop-blur-sm">
-        <div className="max-w-3xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto min-[1920px]:max-w-[80%] px-4 py-4">
           <div className="flex gap-3 items-end">
             <div className="flex-1 relative chat-input-wrap">
               <textarea
