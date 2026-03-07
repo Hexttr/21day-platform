@@ -1,4 +1,4 @@
-import { Users, Ticket, Play, ClipboardList, LogOut, BookOpen, X, Trash2, DollarSign } from "lucide-react";
+import { Users, Ticket, Play, ClipboardList, LogOut, BookOpen, X, Trash2, DollarSign, Sparkles } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -167,9 +167,13 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel className="px-0 pb-2 pt-1">
             {!collapsed ? (
-              <div className="rounded-2xl border border-primary/15 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-3 py-2">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/85">
-                  Инструменты ИИ
+              <div className="mx-3 flex items-center gap-3 rounded-xl border border-primary/15 bg-primary/8 px-3 py-3" style={{ background: 'hsl(263 52% 50% / 0.07)' }}>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-foreground">Инструменты ИИ</div>
+                  <div className="text-[10px] text-muted-foreground">Модели и сервисы</div>
                 </div>
               </div>
             ) : (
@@ -179,30 +183,8 @@ export function AppSidebar() {
             )}
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            {!collapsed && freeToolItems.length > 0 && (
-              <div className="mb-4">
-                <div className="mb-2 flex items-center gap-2 px-2">
-                  <span className="h-px flex-1 bg-emerald-500/25" />
-                  <span className="inline-flex items-center rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                    Бесплатно
-                  </span>
-                  <span className="h-px flex-1 bg-emerald-500/25" />
-                </div>
-                {renderToolMenu(freeToolItems)}
-              </div>
-            )}
-            {!collapsed && paidToolItems.length > 0 && (
-              <div>
-                <div className="mb-2 flex items-center gap-2 px-2">
-                  <span className="h-px flex-1 bg-primary/18" />
-                  <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary/80">
-                    Платно
-                  </span>
-                  <span className="h-px flex-1 bg-primary/18" />
-                </div>
-                {renderToolMenu(paidToolItems)}
-              </div>
-            )}
+            {!collapsed && freeToolItems.length > 0 && renderToolMenu(freeToolItems)}
+            {!collapsed && paidToolItems.length > 0 && renderToolMenu(paidToolItems)}
             {collapsed && renderToolMenu([...freeToolItems, ...paidToolItems])}
           </SidebarGroupContent>
         </SidebarGroup>
