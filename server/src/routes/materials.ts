@@ -5,11 +5,14 @@ import { practicalMaterials } from '../db/schema.js';
 import { getAuthFromRequest } from '../lib/auth.js';
 
 export async function materialsRoutes(app: FastifyInstance) {
-  // Get published materials (authenticated)
+  // Get published materials (authenticated, ai_user — нет доступа)
   app.get('/materials', async (req, reply) => {
     const payload = getAuthFromRequest(req);
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
+    }
+    if (payload.role === 'ai_user') {
+      return reply.status(403).send({ error: 'Доступ к материалам курса недоступен для этого типа аккаунта' });
     }
     const rows = await db
       .select()

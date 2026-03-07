@@ -5,11 +5,14 @@ import { lessonContent } from '../db/schema.js';
 import { getAuthFromRequest } from '../lib/auth.js';
 
 export async function lessonRoutes(app: FastifyInstance) {
-  // Get published lessons (authenticated)
+  // Get published lessons (authenticated, ai_user — нет доступа)
   app.get('/lessons', async (req, reply) => {
     const payload = getAuthFromRequest(req);
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
+    }
+    if (payload.role === 'ai_user') {
+      return reply.status(403).send({ error: 'Доступ к урокам недоступен для этого типа аккаунта' });
     }
     const rows = await db
       .select()
@@ -24,6 +27,9 @@ export async function lessonRoutes(app: FastifyInstance) {
     const payload = getAuthFromRequest(req);
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
+    }
+    if (payload.role === 'ai_user') {
+      return reply.status(403).send({ error: 'Доступ к урокам недоступен для этого типа аккаунта' });
     }
     const lessonId = parseInt(req.params.lessonId, 10);
     if (isNaN(lessonId)) {

@@ -8,7 +8,7 @@ const JWT_EXPIRES_IN = '7d';
 export interface JwtPayload {
   userId: string;
   email: string;
-  role: 'admin' | 'student';
+  role: 'admin' | 'student' | 'ai_user';
 }
 
 export async function hashPassword(password: string): Promise<string> {

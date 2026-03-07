@@ -66,7 +66,7 @@ export async function authRoutes(app: FastifyInstance) {
       email: newUser.email,
       role: 'student',
     });
-    return reply.send({ token, user: { id: newUser.id, email: newUser.email, name: newUser.name } });
+    return reply.send({ token, user: { id: newUser.id, email: newUser.email, name: newUser.name, role: 'student' } });
   });
 
   // Sign in
@@ -89,7 +89,7 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(401).send({ error: 'Неверный email или пароль' });
     }
     const [roleRow] = await db.select().from(userRoles).where(eq(userRoles.userId, user.id));
-    const role = (roleRow?.role as 'admin' | 'student') || 'student';
+    const role = (roleRow?.role as 'admin' | 'student' | 'ai_user') || 'student';
     const token = signToken({ userId: user.id, email: user.email, role });
     return reply.send({
       token,
@@ -111,7 +111,7 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(403).send({ error: 'Аккаунт заблокирован' });
     }
     const [roleRow] = await db.select().from(userRoles).where(eq(userRoles.userId, user.id));
-    const role = (roleRow?.role as 'admin' | 'student') || 'student';
+    const role = (roleRow?.role as 'admin' | 'student' | 'ai_user') || 'student';
     return reply.send({
       user: {
         id: user.id,

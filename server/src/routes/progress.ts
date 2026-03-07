@@ -11,6 +11,9 @@ export async function progressRoutes(app: FastifyInstance) {
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
     }
+    if (payload.role === 'ai_user') {
+      return reply.send([]);
+    }
     const targetUserId = req.query.userId;
     const userId = targetUserId && payload.role === 'admin' ? targetUserId : payload.userId;
     const rows = await db
@@ -27,6 +30,9 @@ export async function progressRoutes(app: FastifyInstance) {
     const payload = getAuthFromRequest(req);
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
+    }
+    if (payload.role === 'ai_user') {
+      return reply.status(403).send({ error: 'Доступ к урокам недоступен для этого типа аккаунта' });
     }
     const { lessonId, completed, quizCompleted } = req.body || {};
     if (!lessonId || typeof lessonId !== 'number') {

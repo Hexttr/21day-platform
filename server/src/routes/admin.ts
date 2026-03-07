@@ -77,6 +77,24 @@ export async function adminRoutes(app: FastifyInstance) {
     return reply.send({ success: true });
   });
 
+  // Admin: set user role
+  app.post<{ Body: { userId: string; role: 'admin' | 'student' | 'ai_user' } }>('/admin/set-role', async (req, reply) => {
+    const payload = getAuthFromRequest(req);
+    if (!payload || payload.role !== 'admin') {
+      return reply.status(403).send({ error: 'Требуются права администратора' });
+    }
+    const { userId, role } = req.body || {};
+    if (!userId || !role || !['admin', 'student', 'ai_user'].includes(role)) {
+      return reply.status(400).send({ error: 'userId и role (admin|student|ai_user) обязательны' });
+    }
+    const [existing] = await db.select().from(userRoles).where(eq(userRoles.userId, userId));
+    if (!existing) {
+      return reply.status(404).send({ error: 'Роль пользователя не найдена' });
+    }
+    await db.update(userRoles).set({ role }).where(eq(userRoles.id, existing.id));
+    return reply.send({ success: true, role });
+  });
+
   // Admin: update user name
   app.post<{ Body: { userId: string; name: string } }>('/admin/users/update-name', async (req, reply) => {
     const payload = getAuthFromRequest(req);

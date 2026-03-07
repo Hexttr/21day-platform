@@ -5,7 +5,7 @@ export interface AppUser {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'student';
+  role: 'admin' | 'student' | 'ai_user';
 }
 
 interface AuthContextType {

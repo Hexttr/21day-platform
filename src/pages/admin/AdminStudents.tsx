@@ -42,7 +42,7 @@ interface StudentProgress {
   user_id: string;
   email: string;
   name: string;
-  role: 'admin' | 'student';
+  role: 'admin' | 'student' | 'ai_user';
   completed_lessons: number;
   quiz_completed: number;
   invitation_code_comment: string | null;
@@ -67,6 +67,8 @@ export default function AdminStudents() {
   const [editedName, setEditedName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
 
+  const [changingRoleFor, setChangingRoleFor] = useState<string | null>(null);
+
   useEffect(() => {
     loadStudents();
   }, []);
@@ -81,7 +83,7 @@ export default function AdminStudents() {
     setLoadingStudents(true);
     try {
       const data = await api<Array<{
-        user_id: string; email: string; name: string; role: 'admin' | 'student';
+        user_id: string; email: string; name: string; role: 'admin' | 'student' | 'ai_user';
         completed_lessons: number; quiz_completed: number;
         invitation_code_comment: string | null; is_blocked: boolean;
       }>>('/admin/users');
@@ -128,6 +130,19 @@ export default function AdminStudents() {
 
   const openEditNameDialog = (student: StudentProgress) => {
     setEditStudent(student); setEditedName(student.name); setEditNameDialogOpen(true);
+  };
+
+  const handleSetRole = async (userId: string, role: 'admin' | 'student' | 'ai_user') => {
+    setChangingRoleFor(userId);
+    try {
+      await api('/admin/set-role', { method: 'POST', body: { userId, role } });
+      toast.success('Роль изменена');
+      loadStudents();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Ошибка смены роли');
+    } finally {
+      setChangingRoleFor(null);
+    }
   };
 
   const handleSaveName = async () => {
@@ -255,11 +270,20 @@ export default function AdminStudents() {
             <p className="text-sm text-muted-foreground">Нет студентов в этой категории</p>
           </div>
         ) : (
-          <div className="divide-y divide-border/50">
+          <>
+            {/* Header row — скрыт на мобильных */}
+            <div className="hidden sm:grid sm:grid-cols-[auto_1fr_auto_auto_auto] gap-4 px-5 sm:px-6 py-3 border-b border-border/50 bg-secondary/20 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <div className="w-10" />
+              <div>Студент</div>
+              <div className="w-[160px]">Роль</div>
+              <div className="text-center min-w-[100px]">Прогресс</div>
+              <div className="w-[140px] text-right">Действия</div>
+            </div>
+            <div className="divide-y divide-border/50">
             {filteredStudents.map((student, index) => (
               <div
                 key={student.user_id}
-                className={`flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-4 hover:bg-secondary/20 transition-colors ${
+                className={`flex flex-col sm:grid sm:grid-cols-[auto_1fr_auto_auto_auto] sm:items-center gap-3 sm:gap-4 px-5 sm:px-6 py-4 hover:bg-secondary/20 transition-colors ${
                   student.is_blocked ? 'bg-destructive/3' : ''
                 }`}
               >
@@ -281,13 +305,6 @@ export default function AdminStudents() {
                         Заблокирован
                       </span>
                     )}
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
-                      student.role === 'admin' 
-                        ? 'bg-primary/10 text-primary' 
-                        : 'bg-secondary text-muted-foreground'
-                    }`}>
-                      {student.role === 'admin' ? 'Админ' : 'Студент'}
-                    </span>
                     {student.invitation_code_comment && student.role === 'student' && student.invitation_code_comment !== 'Первый админ' && (
                       <span className="text-xs px-2 py-0.5 bg-muted/50 text-muted-foreground rounded-full font-medium flex-shrink-0">
                         {student.invitation_code_comment}
@@ -295,6 +312,26 @@ export default function AdminStudents() {
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground truncate mt-0.5">{student.email}</p>
+                </div>
+
+                {/* Роль — отдельная колонка */}
+                <div className="flex items-center gap-2 sm:flex-col sm:items-start">
+                  <span className="text-xs text-muted-foreground sm:hidden">Роль:</span>
+                  <Select
+                    value={student.role}
+                    onValueChange={(v) => handleSetRole(student.user_id, v as 'admin' | 'student' | 'ai_user')}
+                    disabled={changingRoleFor === student.user_id}
+                  >
+                    <SelectTrigger className="w-full sm:w-[160px] h-8 rounded-lg border-border/50 bg-secondary/30 text-xs font-medium gap-1.5">
+                      {changingRoleFor === student.user_id && <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />}
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="admin">Админ</SelectItem>
+                      <SelectItem value="student">Студент</SelectItem>
+                      <SelectItem value="ai_user">Пользователь ИИ</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Progress stats */}
@@ -316,7 +353,7 @@ export default function AdminStudents() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0 sm:justify-end">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -360,7 +397,8 @@ export default function AdminStudents() {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </div>
 

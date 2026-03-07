@@ -59,7 +59,11 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const collapsed = state === "collapsed";
 
-  const goHome = () => { navigate('/'); setOpenMobile(false); };
+  const goHome = () => {
+    const target = user?.role === 'ai_user' ? '/chatgpt' : '/';
+    navigate(target);
+    setOpenMobile(false);
+  };
 
   const completedCount = getCompletedCount();
   const progressPercentage = getProgressPercentage();
@@ -82,7 +86,7 @@ export function AppSidebar() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <NavLink to="/" className="flex justify-center">
+            <NavLink to={user?.role === 'ai_user' ? '/chatgpt' : '/'} className="flex justify-center">
               <div className="w-11 h-11 rounded-xl gradient-hero flex items-center justify-center shadow-glow">
                 <span className="text-white font-extrabold text-lg tracking-tight">21</span>
               </div>
@@ -93,8 +97,8 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* ── Progress pill (expanded) ── */}
-        {!collapsed && (
+        {/* ── Progress pill (expanded) — скрыт для ai_user ── */}
+        {!collapsed && user?.role !== 'ai_user' && (
           <div className="px-3 pb-2">
             <button onClick={goHome} className="w-full text-left p-3 rounded-xl bg-primary/8 border border-primary/15 hover:bg-primary/12 transition-colors cursor-pointer" style={{ background: 'hsl(263 52% 50% / 0.07)' }}>
               <div className="flex items-center justify-between mb-2">
