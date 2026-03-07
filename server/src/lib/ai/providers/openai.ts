@@ -47,7 +47,6 @@ export class OpenAIAdapter implements AIProviderAdapter {
       headers: openaiHeaders(params.apiKey),
       body: JSON.stringify({
         model: params.model.modelKey,
-        temperature: 0.7,
         stream: false,
         messages: [
           { role: 'system', content: params.systemPrompt },
