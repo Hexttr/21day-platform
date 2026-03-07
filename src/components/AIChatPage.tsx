@@ -15,10 +15,10 @@ type Message = {
 };
 
 interface AIChatPageProps {
-  model: string;
   modelName: string;
   modelIcon: string;
   modelColor: string;
+  providerName?: string;
 }
 
 const getChatStorageKey = (modelName: string) => `ai-chat-${modelName.toLowerCase()}`;
@@ -32,7 +32,7 @@ const getModelIconPath = (modelName: string) => {
   return null;
 };
 
-export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPageProps) {
+export function AIChatPage({ modelName, modelIcon, modelColor, providerName }: AIChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -102,7 +102,7 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({ messages: newMessages, model, modelId: selectedModelId }),
+        body: JSON.stringify({ messages: newMessages, modelId: selectedModelId }),
       });
 
       if (response.status === 429) { toast.error('Превышен лимит запросов. Попробуйте позже.'); setIsLoading(false); return; }
@@ -363,7 +363,7 @@ export function AIChatPage({ model, modelName, modelIcon, modelColor }: AIChatPa
             </Button>
           </div>
           <div className="flex items-center justify-between mt-2">
-            <ModelSelector type="text" selectedModelId={selectedModelId} onSelect={setSelectedModelId} />
+            <ModelSelector type="text" selectedModelId={selectedModelId} onSelect={setSelectedModelId} providerName={providerName} />
             <p className="text-xs text-muted-foreground/60">
               Enter — отправить, Shift+Enter — новая строка
             </p>

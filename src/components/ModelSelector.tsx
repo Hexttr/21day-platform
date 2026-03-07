@@ -9,6 +9,10 @@ interface AIModel {
   modelType: 'text' | 'image';
   providerId: string;
   sortOrder: number;
+  supportsStreaming?: boolean;
+  supportsImageInput?: boolean;
+  supportsImageOutput?: boolean;
+  supportsSystemPrompt?: boolean;
 }
 
 interface AIProvider {
@@ -22,6 +26,7 @@ interface ModelSelectorProps {
   selectedModelId: string | null;
   onSelect: (modelId: string) => void;
   className?: string;
+  providerName?: string;
 }
 
 let cachedData: { models: AIModel[]; providers: AIProvider[] } | null = null;
@@ -42,7 +47,7 @@ function fetchModels(): Promise<{ models: AIModel[]; providers: AIProvider[] }> 
   return fetchPromise;
 }
 
-export function ModelSelector({ type, selectedModelId, onSelect, className }: ModelSelectorProps) {
+export function ModelSelector({ type, selectedModelId, onSelect, className, providerName }: ModelSelectorProps) {
   const [models, setModels] = useState<AIModel[]>(cachedData?.models || []);
   const [providers, setProviders] = useState<AIProvider[]>(cachedData?.providers || []);
   const [isOpen, setIsOpen] = useState(false);
@@ -54,15 +59,31 @@ export function ModelSelector({ type, selectedModelId, onSelect, className }: Mo
       .catch(console.error);
   }, []);
 
-  const filteredModels = models.filter(m => m.modelType === type);
+  const allowedProviderIds = providerName
+    ? new Set(providers.filter((provider) => provider.name === providerName).map((provider) => provider.id))
+    : null;
+  const filteredModels = models.filter((model) => {
+    if (model.modelType !== type) return false;
+    if (allowedProviderIds && !allowedProviderIds.has(model.providerId)) return false;
+    return true;
+  });
   const selected = filteredModels.find(m => m.id === selectedModelId);
 
-  // Auto-select first model of this type if none selected
+  // Auto-select the first available model for this selector scope.
   useEffect(() => {
     if (loaded && filteredModels.length > 0 && !selectedModelId) {
       onSelect(filteredModels[0].id);
     }
-  }, [loaded, filteredModels.length, selectedModelId]);
+  }, [loaded, filteredModels, selectedModelId, onSelect]);
+
+  // If the currently selected model falls outside the current provider/type scope, reset to the first valid option.
+  useEffect(() => {
+    if (!loaded || filteredModels.length === 0 || !selectedModelId) return;
+    const stillAvailable = filteredModels.some((model) => model.id === selectedModelId);
+    if (!stillAvailable) {
+      onSelect(filteredModels[0].id);
+    }
+  }, [loaded, filteredModels, selectedModelId, onSelect]);
 
   if (!loaded || filteredModels.length === 0) return null;
 
