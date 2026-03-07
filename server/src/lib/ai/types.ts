@@ -2,6 +2,7 @@ export interface AIChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   images?: string[];
+  attachmentIds?: string[];
 }
 
 export interface AIUsage {
@@ -18,6 +19,7 @@ export interface AIResolvedModel {
   modelType: 'text' | 'image';
   supportsStreaming: boolean;
   supportsImageInput: boolean;
+  supportsDocumentInput: boolean;
   supportsImageOutput: boolean;
   supportsSystemPrompt: boolean;
   inputPricePer1k: string | null;

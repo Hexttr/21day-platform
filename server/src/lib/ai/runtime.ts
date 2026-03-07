@@ -20,6 +20,7 @@ export async function resolveRuntimeModel(
     modelType: model.modelType,
     supportsStreaming: model.supportsStreaming,
     supportsImageInput: model.supportsImageInput,
+    supportsDocumentInput: model.supportsDocumentInput,
     supportsImageOutput: model.supportsImageOutput,
     supportsSystemPrompt: model.supportsSystemPrompt,
     inputPricePer1k: model.inputPricePer1k,
@@ -28,13 +29,15 @@ export async function resolveRuntimeModel(
   };
 }
 
-export function ensureModelSupports(model: AIResolvedModel, capability: 'streaming' | 'imageInput' | 'imageOutput' | 'systemPrompt'): void {
+export function ensureModelSupports(model: AIResolvedModel, capability: 'streaming' | 'imageInput' | 'documentInput' | 'imageOutput' | 'systemPrompt'): void {
   const supported = (() => {
     switch (capability) {
       case 'streaming':
         return model.supportsStreaming;
       case 'imageInput':
         return model.supportsImageInput;
+      case 'documentInput':
+        return model.supportsDocumentInput;
       case 'imageOutput':
         return model.supportsImageOutput;
       case 'systemPrompt':

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Send, Loader2, Sparkles, Trash2, Bot, MessageSquare, Upload } from 'lucide-react';
+import { Send, Loader2, Sparkles, Trash2, Bot, MessageSquare, Upload, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
@@ -8,17 +8,29 @@ import { useChatContext } from '@/contexts/ChatContext';
 import { AIModel, ModelSelector } from '@/components/ModelSelector';
 import { useBalance } from '@/contexts/BalanceContext';
 import { BalanceWidget } from '@/components/BalanceWidget';
-import { ImageUploadPanel } from '@/components/ImageUploadPanel';
+import { ChatAttachment, ChatAttachmentPanel } from '@/components/ChatAttachmentPanel';
 import { getAIToolBadge, getAIToolByProvider, getAIToolByTitle } from '@/lib/ai-tools';
 
 type Message = {
   role: 'user';
   content: string;
   sourceImages?: string[];
+  sourceAttachments?: ChatAttachment[];
 } | {
   role: 'assistant';
   content: string;
   contextImages?: string[];
+  contextAttachments?: ChatAttachment[];
+};
+
+type StoredMessage = {
+  role: 'user';
+  content: string;
+  sourceAttachments?: ChatAttachment[];
+} | {
+  role: 'assistant';
+  content: string;
+  contextAttachments?: ChatAttachment[];
 };
 
 interface AIChatPageProps {
@@ -48,11 +60,13 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
   const [sourceImages, setSourceImages] = useState<string[]>([]);
+  const [sourceAttachments, setSourceAttachments] = useState<ChatAttachment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatContext = useChatContext();
   const { refreshBalance } = useBalance();
   const canAttachImages = Boolean(selectedModel?.supportsImageInput);
+  const canAttachDocuments = Boolean(selectedModel?.supportsDocumentInput);
   const toolConfig = getAIToolByProvider(providerName) || getAIToolByTitle(modelName);
   const initialPrompts = starterPrompts || [
     'Как использовать ИИ в моей работе?',
@@ -67,6 +81,12 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
   }, [canAttachImages, sourceImages.length]);
 
   useEffect(() => {
+    if (!canAttachDocuments && sourceAttachments.length > 0) {
+      setSourceAttachments([]);
+    }
+  }, [canAttachDocuments, sourceAttachments.length]);
+
+  useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -77,7 +97,7 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
     const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
+        const parsed = JSON.parse(saved) as StoredMessage[];
         if (Array.isArray(parsed)) setMessages(parsed);
       } catch (e) {
         console.warn('Failed to parse saved chat:', e);
@@ -88,7 +108,20 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
   useEffect(() => {
     if (messages.length > 0) {
       const storageKey = getChatStorageKey(modelName);
-      localStorage.setItem(storageKey, JSON.stringify(messages.map(({ role, content }) => ({ role, content }))));
+      localStorage.setItem(storageKey, JSON.stringify(messages.map((message) => {
+        if (message.role === 'user') {
+          return {
+            role: message.role,
+            content: message.content,
+            sourceAttachments: message.sourceAttachments,
+          };
+        }
+        return {
+          role: message.role,
+          content: message.content,
+          contextAttachments: message.contextAttachments,
+        };
+      })));
     }
   }, [messages, modelName]);
 
@@ -97,6 +130,7 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
     localStorage.removeItem(storageKey);
     setMessages([]);
     setSourceImages([]);
+    setSourceAttachments([]);
     toast.success('Чат очищен');
   }, [modelName]);
 
@@ -113,12 +147,14 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
       role: 'user',
       content: input.trim(),
       ...(sourceImages.length > 0 && { sourceImages: [...sourceImages] }),
+      ...(sourceAttachments.length > 0 && { sourceAttachments: [...sourceAttachments] }),
     };
     const newMessages = [...messages, userMessage];
 
     setMessages(newMessages);
     setInput('');
     setSourceImages([]);
+    setSourceAttachments([]);
     setIsLoading(true);
 
     let assistantContent = '';
@@ -138,6 +174,7 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
             role: message.role,
             content: message.content,
             images: message.role === 'user' ? message.sourceImages : undefined,
+            attachmentIds: message.role === 'user' ? message.sourceAttachments?.map((attachment) => attachment.id) : undefined,
           })),
         }),
       });
@@ -159,7 +196,12 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
       const decoder = new TextDecoder();
       let textBuffer = '';
 
-      setMessages([...newMessages, { role: 'assistant', content: '', contextImages: userMessage.sourceImages }]);
+      setMessages([...newMessages, {
+        role: 'assistant',
+        content: '',
+        contextImages: userMessage.sourceImages,
+        contextAttachments: userMessage.sourceAttachments,
+      }]);
 
       let streamDone = false;
       while (true) {
@@ -248,6 +290,16 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
                   <p className="text-xs text-muted-foreground">
                     Чат с искусственным интеллектом
                   </p>
+                  {canAttachDocuments && (
+                    <span className="inline-flex items-center rounded-full border border-violet-500/20 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700">
+                      docs
+                    </span>
+                  )}
+                  {canAttachImages && (
+                    <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                      image
+                    </span>
+                  )}
                   {toolConfig && (
                     <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getAIToolBadge(toolConfig.access)}`}>
                       {toolConfig.access === 'free' ? 'free' : 'paid'}
@@ -296,6 +348,11 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
                     {toolConfig.access === 'free' ? 'Бесплатно' : 'Платно'}
                   </span>
                 )}
+                {canAttachDocuments && (
+                  <span className="inline-flex items-center rounded-full border border-violet-500/20 bg-violet-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-violet-700">
+                    Документы
+                  </span>
+                )}
                 {canAttachImages && (
                   <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
                     Multimodal
@@ -303,7 +360,11 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
                 )}
               </div>
               <p className="text-muted-foreground max-w-sm leading-relaxed">
-                {canAttachImages
+                {canAttachImages && canAttachDocuments
+                  ? 'Задайте вопрос, приложите скрин, PDF, таблицу или другой документ и попросите модель проанализировать материалы.'
+                  : canAttachDocuments
+                    ? 'Задайте вопрос и приложите документ, таблицу или презентацию для анализа.'
+                    : canAttachImages
                   ? 'Задайте вопрос, приложите скрин или фото и попросите модель разобрать, сравнить или объяснить изображение.'
                   : 'Задайте любой вопрос, попросите помочь с задачей или обсудите тему урока'}
               </p>
@@ -360,6 +421,28 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
                           </div>
                         </div>
                       )}
+                      {message.contextAttachments && message.contextAttachments.length > 0 && (
+                        <div className="rounded-xl border border-border/50 bg-secondary/30 p-2">
+                          <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            Анализируемые документы
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {message.contextAttachments.map((attachment) => (
+                              <div key={attachment.id} className="inline-flex max-w-full items-start gap-2 rounded-lg border border-border/50 bg-background px-3 py-2">
+                                <FileText className="mt-0.5 h-4 w-4 shrink-0 text-violet-600" />
+                                <div className="min-w-0">
+                                  <div className="truncate text-xs font-medium">{attachment.originalName}</div>
+                                  <div className="text-[11px] text-muted-foreground">
+                                    {attachment.pageCount ? `${attachment.pageCount} стр.` : ''}
+                                    {attachment.sheetCount ? `${attachment.sheetCount} лист.` : ''}
+                                    {attachment.slideCount ? `${attachment.slideCount} слайд.` : ''}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div className="prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:font-serif prose-headings:text-base prose-pre:text-xs prose-code:text-xs prose-code:bg-secondary/50 prose-code:px-1 prose-code:rounded">
                         <ReactMarkdown>{message.content}</ReactMarkdown>
                       </div>
@@ -372,6 +455,21 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
                             <img key={`${url}-${imageIndex}`} src={url} alt="" className="w-11 h-11 rounded object-cover border border-white/30" />
                           ))}
                           {message.sourceImages.length > 6 && <span className="text-xs self-center">+{message.sourceImages.length - 6}</span>}
+                        </div>
+                      )}
+                      {message.sourceAttachments && message.sourceAttachments.length > 0 && (
+                        <div className="flex gap-2 flex-wrap">
+                          {message.sourceAttachments.map((attachment) => (
+                            <div key={attachment.id} className="inline-flex max-w-full items-start gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-2">
+                              <FileText className="mt-0.5 h-4 w-4 shrink-0" />
+                              <div className="min-w-0">
+                                <div className="truncate text-xs font-medium">{attachment.originalName}</div>
+                                <div className="text-[11px] opacity-80">
+                                  {Math.max(1, Math.round(attachment.fileSize / 1024))} KB
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                       <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
@@ -413,16 +511,15 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
       {/* Input */}
       <div className="flex-shrink-0 border-t border-border/50 bg-card/80 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto min-[1920px]:max-w-[80%] px-4 py-4">
-          {canAttachImages ? (
-            <ImageUploadPanel
+          {canAttachImages || canAttachDocuments ? (
+            <ChatAttachmentPanel
               images={sourceImages}
-              onChange={setSourceImages}
+              onImagesChange={setSourceImages}
+              attachments={sourceAttachments}
+              onAttachmentsChange={setSourceAttachments}
+              canAttachImages={canAttachImages}
+              canAttachDocuments={canAttachDocuments}
               disabled={isLoading}
-              previewSummary={(
-                <p className="text-sm text-muted-foreground self-center">
-                  {sourceImages.length} вложений. Можно отправить скрин, фото или референс.
-                </p>
-              )}
               footer={(
                 <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
                   <ModelSelector
@@ -433,21 +530,21 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
                     providerName={providerName}
                   />
                   <p className="text-xs text-muted-foreground/60">
-                    Enter — отправить, Shift+Enter — новая строка, drag&drop — вложить изображение
+                    Enter — отправить, Shift+Enter — новая строка, drag&drop — вложить файл
                   </p>
                 </div>
               )}
               className="p-3"
             >
-              {({ openFilePicker }) => (
+              {({ openFilePicker, isUploadingDocuments }) => (
                 <div className="flex gap-3 items-end">
                   <Button
                     onClick={openFilePicker}
                     variant="outline"
                     size="icon"
                     className="h-[52px] w-[52px] shrink-0 rounded-xl border-border/50 hover:border-primary/40"
-                    disabled={isLoading}
-                    title="Прикрепить изображения"
+                    disabled={isLoading || isUploadingDocuments}
+                    title="Прикрепить файл"
                   >
                     <Upload className="w-4.5 h-4.5" style={{ width: '18px', height: '18px' }} />
                   </Button>
@@ -460,14 +557,14 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
                       placeholder={`Написать ${modelName}...`}
                       rows={1}
                       className="w-full resize-none rounded-2xl border border-border/50 bg-secondary/30 focus:bg-background px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all min-h-[52px] max-h-40 leading-relaxed overflow-y-auto"
-                      disabled={isLoading}
+                      disabled={isLoading || isUploadingDocuments}
                       autoComplete="off"
                       style={{ height: '52px' }}
                     />
                   </div>
                   <Button
                     onClick={sendMessage}
-                    disabled={!input.trim() || isLoading}
+                    disabled={!input.trim() || isLoading || isUploadingDocuments}
                     size="icon"
                     className="h-[52px] w-[52px] min-w-[52px] shrink-0 rounded-2xl gradient-hero hover:opacity-90 shadow-glow transition-all disabled:opacity-50 disabled:shadow-none"
                   >
@@ -479,7 +576,7 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
                   </Button>
                 </div>
               )}
-            </ImageUploadPanel>
+            </ChatAttachmentPanel>
           ) : (
             <>
               <div className="flex gap-3 items-end">

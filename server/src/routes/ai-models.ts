@@ -33,6 +33,7 @@ export async function aiModelsRoutes(app: FastifyInstance) {
       fixedPrice: model.fixedPrice,
       supportsStreaming: model.supportsStreaming,
       supportsImageInput: model.supportsImageInput,
+      supportsDocumentInput: model.supportsDocumentInput,
       supportsImageOutput: model.supportsImageOutput,
       supportsSystemPrompt: model.supportsSystemPrompt,
     }));
@@ -136,7 +137,7 @@ export async function aiModelsRoutes(app: FastifyInstance) {
     Body: {
       providerId: string; modelKey: string; displayName: string; modelType: 'text' | 'image';
       inputPricePer1k?: string; outputPricePer1k?: string; fixedPrice?: string;
-      supportsStreaming?: boolean; supportsImageInput?: boolean; supportsImageOutput?: boolean; supportsSystemPrompt?: boolean;
+      supportsStreaming?: boolean; supportsImageInput?: boolean; supportsDocumentInput?: boolean; supportsImageOutput?: boolean; supportsSystemPrompt?: boolean;
       isActive?: boolean; sortOrder?: number;
     };
   }>('/admin/ai-models', async (req, reply) => {
@@ -152,6 +153,7 @@ export async function aiModelsRoutes(app: FastifyInstance) {
       fixedPrice,
       supportsStreaming,
       supportsImageInput,
+      supportsDocumentInput,
       supportsImageOutput,
       supportsSystemPrompt,
       isActive,
@@ -162,6 +164,7 @@ export async function aiModelsRoutes(app: FastifyInstance) {
       providerId, modelKey: modelKey.trim(), displayName: displayName.trim(), modelType,
       supportsStreaming: supportsStreaming ?? modelType === 'text',
       supportsImageInput: supportsImageInput ?? modelType === 'image',
+      supportsDocumentInput: supportsDocumentInput ?? modelType === 'text',
       supportsImageOutput: supportsImageOutput ?? modelType === 'image',
       supportsSystemPrompt: supportsSystemPrompt ?? modelType === 'text',
       inputPricePer1k: inputPricePer1k || '0', outputPricePer1k: outputPricePer1k || '0',
@@ -184,6 +187,7 @@ export async function aiModelsRoutes(app: FastifyInstance) {
         ...(d.modelType !== undefined && { modelType: String(d.modelType) as 'text' | 'image' }),
         ...(d.supportsStreaming !== undefined && { supportsStreaming: Boolean(d.supportsStreaming) }),
         ...(d.supportsImageInput !== undefined && { supportsImageInput: Boolean(d.supportsImageInput) }),
+        ...(d.supportsDocumentInput !== undefined && { supportsDocumentInput: Boolean(d.supportsDocumentInput) }),
         ...(d.supportsImageOutput !== undefined && { supportsImageOutput: Boolean(d.supportsImageOutput) }),
         ...(d.supportsSystemPrompt !== undefined && { supportsSystemPrompt: Boolean(d.supportsSystemPrompt) }),
         ...(d.inputPricePer1k !== undefined && { inputPricePer1k: String(d.inputPricePer1k) }),

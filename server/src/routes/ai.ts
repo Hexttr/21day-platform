@@ -1,13 +1,15 @@
 import { FastifyInstance, FastifyReply } from 'fastify';
 import { getAuthFromRequest, JwtPayload } from '../lib/auth.js';
 import { checkBilling, calculateCost, deductBalance, getBalance, logUsage, getMarkupPercent, UsageCost } from '../lib/billing.js';
+import { aiAttachmentConfig, buildAttachmentContext, resolveAttachmentsForUser } from '../lib/ai/attachments.js';
 import { getProviderApiKey, getGeminiKey } from '../lib/provider-keys.js';
 import { getProviderAdapter } from '../lib/ai/provider-registry.js';
 import { ensureModelSupports, resolveRuntimeModel } from '../lib/ai/runtime.js';
-import { AIResolvedModel, QuizConversationMessage, QuizLearningState } from '../lib/ai/types.js';
+import { AIChatMessage, AIResolvedModel, QuizConversationMessage, QuizLearningState } from '../lib/ai/types.js';
 
 const DEFAULT_SYSTEM_PROMPT = 'Ты полезный AI-ассистент. Отвечай на русском языке, если пользователь пишет на русском. Давай четкие и полезные ответы. Используй форматирование Markdown когда это уместно.';
 const MAX_IMAGES = 14;
+const MAX_DOCUMENTS_PER_MESSAGE = aiAttachmentConfig.maxDocumentsPerMessage;
 
 type BillingState = Awaited<ReturnType<typeof checkBilling>>;
 
@@ -72,6 +74,51 @@ function exceedsImageLimit(messages: Array<{ images?: string[] }>): boolean {
   return messages.some((message) => Array.isArray(message.images) && message.images.length > MAX_IMAGES);
 }
 
+function hasDocumentAttachments(messages: Array<{ attachmentIds?: string[] }>): boolean {
+  return messages.some((message) => Array.isArray(message.attachmentIds) && message.attachmentIds.length > 0);
+}
+
+function exceedsDocumentLimit(messages: Array<{ attachmentIds?: string[] }>): boolean {
+  return messages.some((message) => Array.isArray(message.attachmentIds) && message.attachmentIds.length > MAX_DOCUMENTS_PER_MESSAGE);
+}
+
+async function enrichMessagesWithAttachments(
+  userId: string,
+  messages: Array<{ role: string; content: string; images?: string[]; attachmentIds?: string[] }>,
+): Promise<AIChatMessage[]> {
+  const result: AIChatMessage[] = [];
+
+  for (const message of messages) {
+    const normalizedRole = message.role === 'assistant'
+      ? 'assistant'
+      : message.role === 'system'
+        ? 'system'
+        : 'user';
+
+    let content = message.content;
+    const attachmentIds = normalizedRole === 'user' && Array.isArray(message.attachmentIds)
+      ? message.attachmentIds.slice(0, MAX_DOCUMENTS_PER_MESSAGE)
+      : [];
+
+    if (attachmentIds.length > 0) {
+      const attachments = await resolveAttachmentsForUser(userId, attachmentIds);
+      const attachmentContext = buildAttachmentContext(attachments);
+      if (attachmentContext) {
+        content = `${content.trim()}\n\n[Контекст из документов]\n${attachmentContext}`.trim();
+      }
+    }
+
+    result.push({
+      role: normalizedRole,
+      content,
+      images: Array.isArray(message.images) ? message.images.slice(0, MAX_IMAGES) : [],
+      attachmentIds,
+    });
+  }
+
+  return result;
+}
+
 async function finalizeUsageBilling(params: {
   payload: JwtPayload;
   model: AIResolvedModel;
@@ -122,7 +169,7 @@ export async function aiRoutes(app: FastifyInstance) {
   });
 
   app.post<{
-    Body: { messages: Array<{ role: string; content: string; images?: string[] }>; modelId?: string };
+    Body: { messages: Array<{ role: string; content: string; images?: string[]; attachmentIds?: string[] }>; modelId?: string };
   }>('/ai/chat', async (req, reply) => {
     const payload = requireAuth(req, reply);
     if (!payload) return;
@@ -143,6 +190,12 @@ export async function aiRoutes(app: FastifyInstance) {
     if (exceedsImageLimit(messages)) {
       return reply.status(400).send({ error: `Максимум ${MAX_IMAGES} изображений в одном сообщении` });
     }
+    if (hasDocumentAttachments(messages) && !model.supportsDocumentInput) {
+      return reply.status(400).send({ error: `Модель "${model.displayName}" не поддерживает анализ документов` });
+    }
+    if (exceedsDocumentLimit(messages)) {
+      return reply.status(400).send({ error: `Максимум ${MAX_DOCUMENTS_PER_MESSAGE} документов в одном сообщении` });
+    }
 
     const key = await resolveKeyOrReply(model, reply);
     if (!key) return;
@@ -153,15 +206,12 @@ export async function aiRoutes(app: FastifyInstance) {
     reply.raw.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
 
     try {
+      const enrichedMessages = await enrichMessagesWithAttachments(payload.userId, messages);
       const adapter = getProviderAdapter(model.providerName);
       const result = await adapter.streamChat({
         apiKey: key,
         model,
-        messages: messages.map((message) => ({
-          role: message.role === 'assistant' ? 'assistant' : message.role === 'system' ? 'system' : 'user',
-          content: message.content,
-          images: Array.isArray(message.images) ? message.images.slice(0, MAX_IMAGES) : [],
-        })),
+        messages: enrichedMessages,
         systemPrompt: DEFAULT_SYSTEM_PROMPT,
         onDelta: (text) => writeSseChunk(reply, text),
       });

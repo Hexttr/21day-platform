@@ -16,6 +16,7 @@ import { waitlistRoutes } from './routes/waitlist.js';
 import { codesRoutes } from './routes/codes.js';
 import { adminRoutes } from './routes/admin.js';
 import { aiRoutes } from './routes/ai.js';
+import { aiAttachmentsRoutes } from './routes/ai-attachments.js';
 import { aiModelsRoutes } from './routes/ai-models.js';
 import { billingRoutes } from './routes/billing.js';
 import { db } from './db/index.js';
@@ -26,11 +27,11 @@ import { getAuthFromRequest } from './lib/auth.js';
 const UPLOADS_DIR = join(__dirname, '..', 'uploads');
 const BLOCKED_PROBE_PATH = /(^\/\.)|(\.(env|sql|ini|log|bak|zip|ya?ml|toml|lock|config|conf|php|asp|aspx|cgi)$)|(^\/(?:wp-admin|wp-login\.php|vendor|\.git|cgi-bin|phpmyadmin|adminer|server-status))/i;
 
-const app = Fastify({ logger: true, bodyLimit: 20 * 1024 * 1024 }); // 20MB for image generation
+const app = Fastify({ logger: true, bodyLimit: 30 * 1024 * 1024 }); // 30MB for image generation + chat payloads
 
 async function main() {
   await app.register(cors, { origin: true });
-  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
+  await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } });
   await app.register(staticPlugin, {
     root: UPLOADS_DIR,
     prefix: '/uploads/',
@@ -44,6 +45,7 @@ async function main() {
   await app.register(codesRoutes, { prefix: '/api' });
   await app.register(adminRoutes, { prefix: '/api' });
   await app.register(aiRoutes, { prefix: '/api' });
+  await app.register(aiAttachmentsRoutes, { prefix: '/api' });
   await app.register(aiModelsRoutes, { prefix: '/api' });
   await app.register(billingRoutes, { prefix: '/api' });
 

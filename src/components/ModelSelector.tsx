@@ -17,6 +17,7 @@ export interface AIModel {
   fixedPrice?: string | null;
   supportsStreaming?: boolean;
   supportsImageInput?: boolean;
+  supportsDocumentInput?: boolean;
   supportsImageOutput?: boolean;
   supportsSystemPrompt?: boolean;
 }
@@ -88,6 +89,8 @@ export function ModelSelector({ type, selectedModelId, onSelect, onModelChange, 
     const key = model.modelKey.toLowerCase();
     const isFree = Number(model.fixedPrice || 0) <= 0 && Number(model.inputPricePer1k || 0) <= 0 && Number(model.outputPricePer1k || 0) <= 0;
     if (isFree) return 'Бесплатно';
+    if (model.supportsDocumentInput && model.supportsImageInput) return 'Документы и изображения';
+    if (model.supportsDocumentInput) return 'Анализ документов';
     if (key.includes('flash-lite')) return 'Самая дешёвая';
     if (key.includes('flash-image')) return 'По умолчанию';
     if (key.includes('2.5-flash') && model.modelType === 'text') return 'Баланс цены и качества';

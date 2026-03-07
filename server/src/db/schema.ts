@@ -123,6 +123,7 @@ export const aiModels = pgTable('ai_models', {
   modelType: text('model_type', { enum: ['text', 'image'] }).notNull(),
   supportsStreaming: boolean('supports_streaming').notNull().default(false),
   supportsImageInput: boolean('supports_image_input').notNull().default(false),
+  supportsDocumentInput: boolean('supports_document_input').notNull().default(false),
   supportsImageOutput: boolean('supports_image_output').notNull().default(false),
   supportsSystemPrompt: boolean('supports_system_prompt').notNull().default(true),
   inputPricePer1k: numeric('input_price_per_1k', { precision: 10, scale: 6 }).default('0'),
@@ -130,6 +131,26 @@ export const aiModels = pgTable('ai_models', {
   fixedPrice: numeric('fixed_price', { precision: 10, scale: 4 }).default('0'),
   isActive: boolean('is_active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const aiAttachments = pgTable('ai_attachments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  kind: text('kind', { enum: ['image', 'document'] }).notNull().default('document'),
+  originalName: text('original_name').notNull(),
+  mimeType: text('mime_type').notNull(),
+  fileSize: integer('file_size').notNull(),
+  storagePath: text('storage_path').notNull(),
+  status: text('status', { enum: ['ready', 'failed'] }).notNull().default('ready'),
+  extractedText: text('extracted_text'),
+  extractedPreview: text('extracted_preview'),
+  pageCount: integer('page_count'),
+  sheetCount: integer('sheet_count'),
+  slideCount: integer('slide_count'),
+  errorMessage: text('error_message'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -196,6 +217,7 @@ export type WaitlistEntry = typeof waitlist.$inferSelect;
 export type AIProvider = typeof aiProviders.$inferSelect;
 export type ProviderSecret = typeof providerSecrets.$inferSelect;
 export type AIModel = typeof aiModels.$inferSelect;
+export type AIAttachment = typeof aiAttachments.$inferSelect;
 export type UserBalance = typeof userBalances.$inferSelect;
 export type BalanceTransaction = typeof balanceTransactions.$inferSelect;
 export type AIUsageLogEntry = typeof aiUsageLog.$inferSelect;
