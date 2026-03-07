@@ -19,8 +19,9 @@ export async function api<T>(
   options: RequestInit & { body?: unknown } = {}
 ): Promise<T> {
   const { body, ...init } = options;
+  const hasBody = body !== undefined && body !== null;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(hasBody && { 'Content-Type': 'application/json' }),
     ...(init.headers as Record<string, string>),
   };
   const token = getToken();
@@ -30,7 +31,7 @@ export async function api<T>(
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers,
-    body: body !== undefined ? JSON.stringify(body) : init.body,
+    body: hasBody ? JSON.stringify(body) : init.body,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
