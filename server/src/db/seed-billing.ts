@@ -123,6 +123,7 @@ async function seedBilling() {
     { key: 'daily_free_requests', value: '10', description: 'Количество бесплатных AI-запросов в день' },
     { key: 'min_topup_amount', value: '100', description: 'Минимальная сумма пополнения (RUB)' },
     { key: 'max_topup_amount', value: '10000', description: 'Максимальная сумма пополнения (RUB)' },
+    { key: 'free_for_admins', value: '1', description: 'Бесплатно для администраторов (1=да, 0=нет)' },
   ];
 
   for (const s of settingsSeeds) {

@@ -9,9 +9,8 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const FALLBACK_CHAT_MODEL = 'gemini-2.5-flash';
 const FALLBACK_CHAT_LIST = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-const FALLBACK_IMAGE_MODEL = 'gemini-2.5-flash-image';
-// Try gemini-3-pro-image (no -preview) and gemini-3-pro-image-preview; fallback to working model
-const FALLBACK_IMAGE_LIST = ['gemini-3-pro-image-preview', 'gemini-3-pro-image', 'gemini-2.5-flash-image'];
+const FALLBACK_IMAGE_MODEL = 'gemini-3-pro-image-preview';
+const FALLBACK_IMAGE_LIST = ['gemini-3-pro-image-preview'];
 
 const GEMINI_STREAM_URL = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent`;
 const GEMINI_GENERATE_URL = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -63,7 +62,7 @@ export async function aiRoutes(app: FastifyInstance) {
     if (!GEMINI_API_KEY) return reply.status(500).send({ error: 'GEMINI_API_KEY не настроен' });
 
     const { messages = [], modelId } = req.body || {};
-    const billing = await checkBilling(payload.userId);
+    const billing = await checkBilling(payload.userId, payload.role === 'admin');
     if (!billing.canProceed) return reply.status(402).send({ error: 'Недостаточно средств. Пополните баланс.' });
 
     const dbModel = await resolveModel(modelId, 'text');
@@ -158,18 +157,15 @@ export async function aiRoutes(app: FastifyInstance) {
     const { prompt, image, modelId } = req.body || {};
     if (!prompt?.trim()) return reply.status(400).send({ error: 'prompt обязателен' });
 
-    const billing = await checkBilling(payload.userId);
+    const billing = await checkBilling(payload.userId, payload.role === 'admin');
     if (!billing.canProceed) return reply.status(402).send({ error: 'Недостаточно средств. Пополните баланс.' });
 
     const dbModel = await resolveModel(modelId, 'image');
     const modelKey = dbModel?.modelKey || FALLBACK_IMAGE_MODEL;
-    // When user selects a model, try it first, then fallback to working model if it fails
-    const modelsToTry = dbModel
-      ? [modelKey, FALLBACK_IMAGE_MODEL].filter((m, i, a) => a.indexOf(m) === i)
-      : FALLBACK_IMAGE_LIST;
+    const modelsToTry = dbModel ? [modelKey] : FALLBACK_IMAGE_LIST;
 
     const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [
-      { text: `Сгенерируй изображение по описанию: ${prompt.trim()}` },
+      { text: prompt.trim() },
     ];
     if (image) {
       const base64 = image.replace(/^data:image\/\w+;base64,/, '');
@@ -201,6 +197,7 @@ export async function aiRoutes(app: FastifyInstance) {
           return lastErr || 'Image model not found';
         }
       })();
+      console.error('[ai/image] API error', res?.status, modelKey, msg.slice(0, 200));
       return reply.status(502).send({ error: msg });
     }
 
@@ -210,13 +207,24 @@ export async function aiRoutes(app: FastifyInstance) {
     let imageUrl: string | null = null;
     if (content) {
       for (const part of content) {
-        const inline = (part as { inlineData?: { mimeType?: string; data: string } }).inlineData;
-        if (inline?.data) { imageUrl = `data:${inline.mimeType || 'image/png'};base64,${inline.data}`; break; }
+        // API may return inlineData (camelCase) or inline_data (snake_case)
+        const p = part as { inlineData?: { mimeType?: string; data: string }; inline_data?: { mime_type?: string; data: string } };
+        const inline = p.inlineData ?? p.inline_data;
+        const mime = inline && ('mimeType' in inline ? inline.mimeType : inline.mime_type);
+        const b64 = inline?.data;
+        if (b64) {
+          imageUrl = `data:${mime || 'image/png'};base64,${b64}`;
+          break;
+        }
       }
     }
-    if (!imageUrl) return reply.status(500).send({ error: 'Не удалось сгенерировать изображение' });
+    if (!imageUrl) {
+      const errDetail = candidate?.finishReason || data.promptFeedback?.blockReason || 'no image in response';
+      console.error('[ai/image] No image in response:', errDetail, 'parts:', JSON.stringify(content?.slice(0, 2)));
+      return reply.status(500).send({ error: `Не удалось сгенерировать изображение: ${errDetail}` });
+    }
 
-    // Bill image request
+    // Bill ONLY on success — never on 502/500 returns above
     const markup = await getMarkupPercent();
     const cost = calculateCost('image', 0, 0, parseFloat(dbModel?.fixedPrice || '0'), 0, 0, markup);
     const usageId = await logUsage(payload.userId, dbModel?.id || null, 'image', cost, billing.isFree);
@@ -240,7 +248,7 @@ export async function aiRoutes(app: FastifyInstance) {
     if (!payload) return;
     if (!GEMINI_API_KEY) return reply.status(500).send({ error: 'GEMINI_API_KEY не настроен' });
 
-    const billing = await checkBilling(payload.userId);
+    const billing = await checkBilling(payload.userId, payload.role === 'admin');
     if (!billing.canProceed) return reply.status(402).send({ error: 'Недостаточно средств. Пополните баланс.' });
 
     const { lessonTitle, lessonDescription, videoTopics = [], userAnswer, conversationHistory = [], customPrompt, learningState } = req.body || {};

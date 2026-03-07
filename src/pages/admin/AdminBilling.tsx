@@ -126,20 +126,33 @@ export default function AdminBilling() {
               <h2 className="font-serif text-lg font-semibold">Настройки платформы</h2>
             </div>
             {[
-              { key: 'markup_percent', label: 'Наценка на AI-запросы (%)', hint: 'Процент наценки поверх базовой стоимости' },
-              { key: 'daily_free_requests', label: 'Бесплатных запросов в день', hint: 'Количество бесплатных AI-запросов для каждого пользователя' },
-              { key: 'min_topup_amount', label: 'Мин. сумма пополнения (₽)', hint: '' },
-              { key: 'max_topup_amount', label: 'Макс. сумма пополнения (₽)', hint: '' },
-            ].map(({ key, label, hint }) => (
+              { key: 'markup_percent', label: 'Наценка на AI-запросы (%)', hint: 'Процент наценки поверх базовой стоимости', type: 'number' as const },
+              { key: 'daily_free_requests', label: 'Бесплатных запросов в день', hint: 'Количество бесплатных AI-запросов для каждого пользователя', type: 'number' as const },
+              { key: 'min_topup_amount', label: 'Мин. сумма пополнения (₽)', hint: '', type: 'number' as const },
+              { key: 'max_topup_amount', label: 'Макс. сумма пополнения (₽)', hint: '', type: 'number' as const },
+              { key: 'free_for_admins', label: 'Бесплатно для администраторов', hint: 'Админы не тратят баланс при использовании AI (чат, изображения, квиз)', type: 'boolean' as const },
+            ].map(({ key, label, hint, type }) => (
               <div key={key}>
                 <label className="block text-sm font-medium text-foreground mb-1">{label}</label>
                 {hint && <p className="text-xs text-muted-foreground mb-2">{hint}</p>}
-                <input
-                  type="number"
-                  value={settings[key] || ''}
-                  onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
-                  className="w-full h-10 rounded-xl border border-border/50 bg-secondary/30 px-3 text-sm focus:border-primary outline-none"
-                />
+                {type === 'boolean' ? (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(settings[key] || '1') === '1'}
+                      onChange={(e) => setSettings({ ...settings, [key]: e.target.checked ? '1' : '0' })}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm">Да</span>
+                  </label>
+                ) : (
+                  <input
+                    type="number"
+                    value={settings[key] || ''}
+                    onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-border/50 bg-secondary/30 px-3 text-sm focus:border-primary outline-none"
+                  />
+                )}
               </div>
             ))}
             <Button onClick={saveSettings} className="rounded-xl gap-2">

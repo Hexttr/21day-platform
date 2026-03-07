@@ -17,6 +17,11 @@ export async function getDailyFreeLimit(): Promise<number> {
   return val ? parseInt(val, 10) : 10;
 }
 
+export async function getFreeForAdmins(): Promise<boolean> {
+  const val = await getSetting('free_for_admins');
+  return val === '1' || val?.toLowerCase() === 'true';
+}
+
 export async function getBalance(userId: string): Promise<number> {
   const [row] = await db.select().from(userBalances).where(eq(userBalances.userId, userId));
   return row ? parseFloat(row.balance) : 0;
@@ -52,13 +57,18 @@ export interface BillingCheck {
   canProceed: boolean;
 }
 
-export async function checkBilling(userId: string): Promise<BillingCheck> {
+export async function checkBilling(userId: string, isAdmin = false): Promise<BillingCheck> {
   await ensureBalanceRow(userId);
-  const [freeLimit, freeCount, balance] = await Promise.all([
+  const [freeLimit, freeCount, balance, freeForAdmins] = await Promise.all([
     getDailyFreeLimit(),
     getDailyFreeCount(userId),
     getBalance(userId),
+    getFreeForAdmins(),
   ]);
+
+  if (isAdmin && freeForAdmins) {
+    return { isFree: true, balance, canProceed: true };
+  }
 
   const isFree = freeCount < freeLimit;
   return {
