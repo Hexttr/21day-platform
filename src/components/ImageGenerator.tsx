@@ -72,6 +72,13 @@ export function ImageGenerator() {
     }
   }, [messages]);
 
+  const willUseLastImage =
+    sourceImages.length === 0 &&
+    (() => {
+      const last = [...messages].reverse().find((m) => m.role === 'assistant' && m.imageUrl);
+      return Boolean(last);
+    })();
+
   const clearChat = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     setMessages([]);
@@ -138,9 +145,17 @@ export function ImageGenerator() {
     };
     setMessages((prev) => [...prev, userMsg]);
     setPrompt('');
-    const imagesToSend = [...sourceImages];
+    let imagesToSend = [...sourceImages];
     removeSourceImage();
     setIsLoading(true);
+
+    // Если пользователь не прикрепил изображений — используем последнее сгенерированное (контекст диалога)
+    if (imagesToSend.length === 0) {
+      const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && m.imageUrl);
+      if (lastAssistant && lastAssistant.role === 'assistant' && lastAssistant.imageUrl) {
+        imagesToSend = [lastAssistant.imageUrl];
+      }
+    }
 
     try {
       const resized = await Promise.all(imagesToSend.map((url) => resizeImageForUpload(url)));
@@ -322,7 +337,13 @@ export function ImageGenerator() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={sourceImages.length ? 'Опишите изменения или коллаж...' : 'Опишите, что хотите создать...'}
+            placeholder={
+              sourceImages.length
+                ? 'Опишите изменения или коллаж...'
+                : willUseLastImage
+                  ? 'Редактировать последнее изображение (например: добавь Карлссона)...'
+                  : 'Опишите, что хотите создать...'
+            }
             className="min-h-[52px] max-h-[120px] resize-none rounded-xl bg-secondary/30 border-border/50 focus:border-primary text-sm flex-1"
             disabled={isLoading}
             rows={1}
@@ -341,11 +362,16 @@ export function ImageGenerator() {
             )}
           </Button>
         </div>
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
           <ModelSelector type="image" selectedModelId={selectedModelId} onSelect={setSelectedModelId} />
-          <p className="text-xs text-muted-foreground/60">
-            PNG, JPEG, WebP до {MAX_FILE_SIZE_MB}MB. Enter — сгенерировать
-          </p>
+          <div className="flex items-center gap-3">
+            {willUseLastImage && (
+              <span className="text-xs text-primary/80 font-medium">Будет использовано последнее изображение</span>
+            )}
+            <p className="text-xs text-muted-foreground/60">
+              PNG, JPEG, WebP до {MAX_FILE_SIZE_MB}MB. Enter — сгенерировать
+            </p>
+          </div>
         </div>
       </div>
     </div>
