@@ -72,6 +72,7 @@ export class AnthropicAdapter implements AIProviderAdapter {
     const response = await fetch(ANTHROPIC_MESSAGES_URL, {
       method: 'POST',
       headers: anthropicHeaders(params.apiKey),
+      signal: params.signal,
       body: JSON.stringify({
         model: params.model.modelKey,
         max_tokens: 8192,

@@ -10,6 +10,10 @@ import { AIChatMessage, AIResolvedModel, QuizConversationMessage, QuizLearningSt
 const DEFAULT_SYSTEM_PROMPT = 'Ты полезный AI-ассистент. Отвечай на русском языке, если пользователь пишет на русском. Давай четкие и полезные ответы. Используй форматирование Markdown когда это уместно.';
 const MAX_IMAGES = 14;
 const MAX_DOCUMENTS_PER_MESSAGE = aiAttachmentConfig.maxDocumentsPerMessage;
+const MAX_SINGLE_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_CHAT_TOTAL_IMAGE_BYTES = 18 * 1024 * 1024;
+const MAX_IMAGE_GENERATION_TOTAL_IMAGE_BYTES = 24 * 1024 * 1024;
+const MAX_TOTAL_DOCUMENT_BYTES = 30 * 1024 * 1024;
 
 type BillingState = Awaited<ReturnType<typeof checkBilling>>;
 
@@ -33,8 +37,45 @@ function parseMoney(value: string | null | undefined): number {
   return parseFloat(value || '0');
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && (error.name === 'AbortError' || error.message.toLowerCase().includes('aborted'));
+}
+
 function writeSseChunk(reply: FastifyReply, text: string): void {
   reply.raw.write(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`);
+}
+
+function estimateDataUrlBytes(value: string): number {
+  if (!value) return 0;
+  const base64 = value.includes(',') ? value.slice(value.indexOf(',') + 1) : value;
+  const normalized = base64.replace(/\s+/g, '');
+  const padding = normalized.endsWith('==') ? 2 : normalized.endsWith('=') ? 1 : 0;
+  return Math.max(0, Math.floor((normalized.length * 3) / 4) - padding);
+}
+
+function collectImagePayloadStats(messages: Array<{ images?: string[] }>): { totalBytes: number; maxSingleBytes: number } {
+  let totalBytes = 0;
+  let maxSingleBytes = 0;
+
+  for (const message of messages) {
+    for (const image of message.images || []) {
+      const size = estimateDataUrlBytes(image);
+      totalBytes += size;
+      maxSingleBytes = Math.max(maxSingleBytes, size);
+    }
+  }
+
+  return { totalBytes, maxSingleBytes };
+}
+
+function createAbortController(req: { raw: NodeJS.EventEmitter & { destroyed?: boolean } }) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  req.raw.once('close', abort);
+  return {
+    controller,
+    cleanup: () => req.raw.off('close', abort),
+  };
 }
 
 async function resolveKeyOrReply(model: AIResolvedModel, reply: FastifyReply): Promise<string | null> {
@@ -119,6 +160,29 @@ async function enrichMessagesWithAttachments(
   return result;
 }
 
+async function validateResolvedAttachmentWeight(
+  userId: string,
+  messages: Array<{ role: string; attachmentIds?: string[] }>,
+): Promise<void> {
+  let totalBytes = 0;
+
+  for (const message of messages) {
+    const attachmentIds = Array.isArray(message.attachmentIds)
+      ? message.attachmentIds.slice(0, MAX_DOCUMENTS_PER_MESSAGE)
+      : [];
+
+    if (attachmentIds.length === 0) continue;
+
+    const attachments = await resolveAttachmentsForUser(userId, attachmentIds);
+    for (const attachment of attachments) {
+      totalBytes += attachment.fileSize;
+      if (totalBytes > MAX_TOTAL_DOCUMENT_BYTES) {
+        throw new Error(`Слишком тяжёлый набор документов. Максимум ${Math.round(MAX_TOTAL_DOCUMENT_BYTES / (1024 * 1024))} MB на запрос.`);
+      }
+    }
+  }
+}
+
 async function finalizeUsageBilling(params: {
   payload: JwtPayload;
   model: AIResolvedModel;
@@ -190,11 +254,23 @@ export async function aiRoutes(app: FastifyInstance) {
     if (exceedsImageLimit(messages)) {
       return reply.status(400).send({ error: `Максимум ${MAX_IMAGES} изображений в одном сообщении` });
     }
+    const imageStats = collectImagePayloadStats(messages);
+    if (imageStats.maxSingleBytes > MAX_SINGLE_IMAGE_BYTES) {
+      return reply.status(400).send({ error: `Одно из изображений слишком большое. Максимум ${Math.round(MAX_SINGLE_IMAGE_BYTES / (1024 * 1024))} MB на изображение.` });
+    }
+    if (imageStats.totalBytes > MAX_CHAT_TOTAL_IMAGE_BYTES) {
+      return reply.status(400).send({ error: `Слишком тяжёлый набор изображений. Максимум ${Math.round(MAX_CHAT_TOTAL_IMAGE_BYTES / (1024 * 1024))} MB на запрос.` });
+    }
     if (hasDocumentAttachments(messages) && !model.supportsDocumentInput) {
       return reply.status(400).send({ error: `Модель "${model.displayName}" не поддерживает анализ документов` });
     }
     if (exceedsDocumentLimit(messages)) {
       return reply.status(400).send({ error: `Максимум ${MAX_DOCUMENTS_PER_MESSAGE} документов в одном сообщении` });
+    }
+    try {
+      await validateResolvedAttachmentWeight(payload.userId, messages);
+    } catch (error) {
+      return reply.status(400).send({ error: parseErrorMessage(error) });
     }
 
     const key = await resolveKeyOrReply(model, reply);
@@ -204,6 +280,7 @@ export async function aiRoutes(app: FastifyInstance) {
     if (!billing.canProceed) return reply.status(402).send({ error: 'Недостаточно средств. Пополните баланс.' });
 
     reply.raw.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+    const { controller, cleanup } = createAbortController(req);
 
     try {
       const enrichedMessages = await enrichMessagesWithAttachments(payload.userId, messages);
@@ -214,7 +291,10 @@ export async function aiRoutes(app: FastifyInstance) {
         messages: enrichedMessages,
         systemPrompt: DEFAULT_SYSTEM_PROMPT,
         onDelta: (text) => writeSseChunk(reply, text),
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
 
       await finalizeUsageBilling({
         payload,
@@ -227,9 +307,14 @@ export async function aiRoutes(app: FastifyInstance) {
 
       reply.raw.write('data: [DONE]\n\n');
     } catch (error) {
-      reply.raw.write(`data: ${JSON.stringify({ error: parseErrorMessage(error) })}\n\n`);
+      if (!controller.signal.aborted && !isAbortError(error)) {
+        reply.raw.write(`data: ${JSON.stringify({ error: parseErrorMessage(error) })}\n\n`);
+      }
     } finally {
-      reply.raw.end();
+      cleanup();
+      if (!reply.raw.writableEnded && !reply.raw.destroyed) {
+        reply.raw.end();
+      }
     }
   });
 
@@ -256,10 +341,18 @@ export async function aiRoutes(app: FastifyInstance) {
     if (imageList.length > 0 && !model.supportsImageInput) {
       return reply.status(400).send({ error: `Модель "${model.displayName}" не поддерживает входные изображения` });
     }
+    const imageStats = collectImagePayloadStats([{ images: imageList }]);
+    if (imageStats.maxSingleBytes > MAX_SINGLE_IMAGE_BYTES) {
+      return reply.status(400).send({ error: `Одно из изображений слишком большое. Максимум ${Math.round(MAX_SINGLE_IMAGE_BYTES / (1024 * 1024))} MB на изображение.` });
+    }
+    if (imageStats.totalBytes > MAX_IMAGE_GENERATION_TOTAL_IMAGE_BYTES) {
+      return reply.status(400).send({ error: `Слишком тяжёлый набор изображений. Максимум ${Math.round(MAX_IMAGE_GENERATION_TOTAL_IMAGE_BYTES / (1024 * 1024))} MB на запрос.` });
+    }
     if (!model.supportsImageOutput) {
       return reply.status(400).send({ error: `Модель "${model.displayName}" не поддерживает генерацию изображений` });
     }
 
+    const { controller, cleanup } = createAbortController(req);
     try {
       const adapter = getProviderAdapter(model.providerName);
       const result = await adapter.generateImage({
@@ -267,7 +360,10 @@ export async function aiRoutes(app: FastifyInstance) {
         model,
         prompt,
         images: imageList,
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
 
       const cost = await finalizeUsageBilling({
         payload,
@@ -283,7 +379,10 @@ export async function aiRoutes(app: FastifyInstance) {
         cost: { finalCost: cost.finalCost, isFree: billing.isFree },
       });
     } catch (error) {
+      if (controller.signal.aborted || isAbortError(error)) return;
       return reply.status(502).send({ error: parseErrorMessage(error) });
+    } finally {
+      cleanup();
     }
   });
 
@@ -312,6 +411,7 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const { lessonTitle, lessonDescription, videoTopics = [], userAnswer, conversationHistory = [], customPrompt, learningState } = req.body || {};
 
+    const { controller, cleanup } = createAbortController(req);
     try {
       const adapter = getProviderAdapter(model.providerName);
       const result = await adapter.runQuiz({
@@ -324,7 +424,10 @@ export async function aiRoutes(app: FastifyInstance) {
         conversationHistory: conversationHistory as QuizConversationMessage[],
         customPrompt,
         learningState,
+        signal: controller.signal,
       });
+
+      if (controller.signal.aborted) return;
 
       await finalizeUsageBilling({
         payload,
@@ -341,10 +444,13 @@ export async function aiRoutes(app: FastifyInstance) {
         allPassed: result.allPassed,
       });
     } catch (error) {
+      if (controller.signal.aborted || isAbortError(error)) return;
       if (learningState) {
         return reply.send({ response: 'Произошла ошибка обработки. Попробуйте повторить ваш ответ.', learningState, allPassed: false });
       }
       return reply.status(502).send({ error: parseErrorMessage(error) });
+    } finally {
+      cleanup();
     }
   });
 

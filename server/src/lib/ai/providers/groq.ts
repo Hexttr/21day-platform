@@ -31,6 +31,7 @@ export class GroqAdapter implements AIProviderAdapter {
     const response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
       method: 'POST',
       headers: groqHeaders(params.apiKey),
+      signal: params.signal,
       body: JSON.stringify({
         model: params.model.modelKey,
         temperature: 0.7,

@@ -107,6 +107,7 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const skipConversationSyncRef = useRef(false);
+  const activeRequestRef = useRef<AbortController | null>(null);
   const chatContext = useChatContext();
   const { refreshBalance } = useBalance();
   const canAttachImages = Boolean(selectedModel?.supportsImageInput);
@@ -216,6 +217,13 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
     return () => chatContext?.unregisterClearHandler(modelPath);
   }, [chatContext, modelName, clearChat]);
 
+  useEffect(() => (
+    () => {
+      activeRequestRef.current?.abort();
+      activeRequestRef.current = null;
+    }
+  ), []);
+
   const startNewChat = useCallback(() => {
     skipConversationSyncRef.current = true;
     setActiveConversationId(null);
@@ -287,10 +295,13 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
     let assistantContent = '';
 
     try {
+      const controller = new AbortController();
+      activeRequestRef.current = controller;
       const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:3001/api');
       const response = await fetch(`${apiUrl}/ai/chat`, {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
@@ -374,10 +385,15 @@ export function AIChatPage({ modelName, modelIcon, modelColor, providerName, sta
       }
       setTimeout(() => refreshBalance(), 500);
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setMessages(newMessages);
+        return;
+      }
       console.error('AI chat error:', error);
       toast.error('Ошибка при отправке сообщения');
       setMessages(newMessages);
     } finally {
+      activeRequestRef.current = null;
       setIsLoading(false);
     }
   };

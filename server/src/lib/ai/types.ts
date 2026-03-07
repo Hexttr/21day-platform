@@ -33,6 +33,7 @@ export interface StreamChatParams {
   messages: AIChatMessage[];
   systemPrompt: string;
   onDelta: (text: string) => void;
+  signal?: AbortSignal;
 }
 
 export interface StreamChatResult {
@@ -44,6 +45,7 @@ export interface GenerateImageParams {
   model: AIResolvedModel;
   prompt: string;
   images: string[];
+  signal?: AbortSignal;
 }
 
 export interface GenerateImageResult {
@@ -72,6 +74,7 @@ export interface RunQuizParams {
   conversationHistory: QuizConversationMessage[];
   customPrompt?: string;
   learningState?: QuizLearningState;
+  signal?: AbortSignal;
 }
 
 export interface RunQuizResult {

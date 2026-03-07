@@ -45,6 +45,7 @@ export class OpenAIAdapter implements AIProviderAdapter {
     const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
       method: 'POST',
       headers: openaiHeaders(params.apiKey),
+      signal: params.signal,
       body: JSON.stringify({
         model: params.model.modelKey,
         stream: false,

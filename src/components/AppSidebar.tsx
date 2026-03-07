@@ -182,7 +182,7 @@ export function AppSidebar() {
               </span>
             )}
           </SidebarGroupLabel>
-          <SidebarGroupContent>
+          <SidebarGroupContent className={!collapsed ? "pt-2" : undefined}>
             {!collapsed && freeToolItems.length > 0 && renderToolMenu(freeToolItems)}
             {!collapsed && paidToolItems.length > 0 && renderToolMenu(paidToolItems)}
             {collapsed && renderToolMenu([...freeToolItems, ...paidToolItems])}

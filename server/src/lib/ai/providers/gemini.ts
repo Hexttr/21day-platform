@@ -65,6 +65,7 @@ export class GeminiAdapter implements AIProviderAdapter {
     const response = await fetch(geminiStreamUrl(params.model.modelKey), {
       method: 'POST',
       headers: geminiHeaders(params.apiKey),
+      signal: params.signal,
       body: JSON.stringify({
         systemInstruction: params.model.supportsSystemPrompt ? {
           parts: [{ text: params.systemPrompt }],
@@ -135,6 +136,7 @@ export class GeminiAdapter implements AIProviderAdapter {
     const response = await fetch(geminiGenerateUrl(params.model.modelKey), {
       method: 'POST',
       headers: geminiHeaders(params.apiKey),
+      signal: params.signal,
       body: JSON.stringify({
         contents: [{ role: 'user', parts }],
         generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
@@ -251,6 +253,7 @@ ${JSON.stringify(params.learningState, null, 2)}`;
     const response = await fetch(geminiGenerateUrl(params.model.modelKey), {
       method: 'POST',
       headers: geminiHeaders(params.apiKey),
+      signal: params.signal,
       body: JSON.stringify({
         contents,
         tools: [{
