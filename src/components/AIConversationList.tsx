@@ -45,7 +45,7 @@ export function AIConversationList({
 
       <div className="flex-1 overflow-y-auto px-3 py-3">
         {conversations.length === 0 ? (
-          <div className="ai-soft-panel border-dashed px-4 py-5 text-sm text-muted-foreground">
+          <div className="rounded-3xl border border-border/60 border-dashed bg-background/95 px-4 py-5 text-sm text-muted-foreground shadow-xs">
             Здесь появятся ваши диалоги. Новый чат создастся автоматически после первого сообщения.
           </div>
         ) : (

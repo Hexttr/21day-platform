@@ -54,8 +54,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const hideFooter = ['/chatgpt', '/claude', '/gemini', '/groq', '/edge-tts', '/nanobanana'].includes(location.pathname);
 
-  // Hide sidebar completely for unauthenticated users
   if (!isAuthenticated && !isLoading) {
+    if (location.pathname !== "/") {
+      return <Navigate to="/" replace />;
+    }
+
     return (
       <div className="min-h-screen flex w-full flex-col">
         <main className="flex-1 min-h-0 overflow-auto">{children}</main>

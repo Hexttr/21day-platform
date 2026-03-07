@@ -164,10 +164,10 @@ export function AppSidebar() {
         )}
 
         {/* ── AI Tools ── */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="px-0 pb-2 pt-1">
+        <SidebarGroup className={!collapsed ? "px-3 pt-2 pb-2" : undefined}>
+          <SidebarGroupLabel className="h-auto px-0 pb-3 pt-0">
             {!collapsed ? (
-              <div className="mx-3 flex items-center gap-3 rounded-xl border border-primary/15 bg-primary/8 px-3 py-3" style={{ background: 'hsl(263 52% 50% / 0.07)' }}>
+              <div className="flex w-full items-center gap-3 rounded-xl border border-primary/15 bg-primary/8 px-3 py-3" style={{ background: 'hsl(263 52% 50% / 0.07)' }}>
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
@@ -182,7 +182,7 @@ export function AppSidebar() {
               </span>
             )}
           </SidebarGroupLabel>
-          <SidebarGroupContent className={!collapsed ? "pt-2" : undefined}>
+          <SidebarGroupContent className={!collapsed ? "pt-1" : undefined}>
             {!collapsed && freeToolItems.length > 0 && renderToolMenu(freeToolItems)}
             {!collapsed && paidToolItems.length > 0 && renderToolMenu(paidToolItems)}
             {collapsed && renderToolMenu([...freeToolItems, ...paidToolItems])}
@@ -238,7 +238,11 @@ export function AppSidebar() {
                 </div>
               </div>
               <button
-                onClick={() => signOut()}
+                onClick={async () => {
+                  await signOut();
+                  setOpenMobile(false);
+                  navigate('/', { replace: true });
+                }}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive font-medium text-sm hover:bg-destructive hover:text-white transition-colors"
               >
                 <LogOut className="w-4 h-4" />
@@ -247,7 +251,11 @@ export function AppSidebar() {
             </>
           ) : (
             <button
-              onClick={() => signOut()}
+              onClick={async () => {
+                await signOut();
+                setOpenMobile(false);
+                navigate('/', { replace: true });
+              }}
               className="w-8 h-8 rounded-full flex items-center justify-center border border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive hover:text-white transition-colors flex-shrink-0 mx-auto"
               title="Выйти"
             >
