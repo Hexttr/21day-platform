@@ -35,8 +35,16 @@ export function ImageGenerator() {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { refreshBalance } = useBalance();
   const chatContext = useChatContext();
+
+  const starterPrompts = [
+    'Сгенерируй кота на велосипеде в стиле акварели',
+    'Сделай кинематографичный портрет девушки в неоновом городе',
+    'Создай минималистичный логотип для AI-студии',
+    'Нарисуй уютную кофейню в японском стиле',
+  ];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -246,7 +254,7 @@ export function ImageGenerator() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto min-h-0 space-y-4 -mx-1 px-1">
         {messages.length === 0 && !isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center bg-card rounded-2xl border border-border/50">
+          <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in-up">
             <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5 shadow-large overflow-hidden bg-card border border-border/50">
               <img src="/icons/banano.png" alt="" className="w-14 h-14 object-contain" />
             </div>
@@ -254,6 +262,21 @@ export function ImageGenerator() {
             <p className="text-sm text-muted-foreground max-w-sm">
               Опишите, что хотите создать. Можно прикрепить до {MAX_IMAGES} фото для редактирования или коллажа.
             </p>
+            <div className="mt-8 grid gap-3 w-full max-w-md">
+              {starterPrompts.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => {
+                    setPrompt(suggestion);
+                    textareaRef.current?.focus();
+                  }}
+                  className="text-left px-4 py-3.5 rounded-xl bg-white border-2 border-border shadow-md hover:shadow-lg hover:border-primary/40 hover:bg-primary/5 text-sm font-medium text-foreground transition-all duration-200 group"
+                >
+                  <span className="text-primary group-hover:text-primary mr-2">→</span>
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           messages.map((msg, idx) => (
@@ -376,6 +399,7 @@ export function ImageGenerator() {
           </Button>
 
           <Textarea
+            ref={textareaRef}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
