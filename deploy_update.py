@@ -45,7 +45,10 @@ def main():
         print("3. Server build...")
         run_ssh(client, f"cd {DEPLOY_DIR}/server && npm run build")
 
-        print("4. PM2 restart...")
+        print("4. DB seed-billing (NanoBanana modelKey fix)...")
+        run_ssh(client, f"cd {DEPLOY_DIR}/server && npm run db:seed-billing", check=False)
+
+        print("5. PM2 restart...")
         run_ssh(client, "pm2 restart 21day")
 
         print("\nГотово. https://21day.club")
