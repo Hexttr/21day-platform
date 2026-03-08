@@ -130,39 +130,6 @@ export function AppSidebar() {
     </SidebarMenu>
   );
 
-  const renderToolsHubMenuItem = () => {
-    const isActive = location.pathname === '/ai';
-
-    return (
-      <SidebarMenu className="mb-2 gap-1.5">
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            asChild
-            isActive={isActive}
-            tooltip="Все инструменты"
-            className={getMenuButtonClass(isActive)}
-          >
-            <NavLink
-              to="/ai"
-              className="flex items-center gap-3"
-              onClick={() => setOpenMobile(false)}
-            >
-              <span className={cn(
-                "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors",
-                isActive
-                  ? "border-primary/15 bg-primary/10 text-primary"
-                  : "border-border/40 bg-background/80 text-muted-foreground",
-              )}>
-                <Sparkles className="h-4 w-4" />
-              </span>
-              {!collapsed && <span className="font-medium">Все инструменты</span>}
-            </NavLink>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    );
-  };
-
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
       {/* ── Logo + collapse button ── */}
@@ -224,15 +191,19 @@ export function AppSidebar() {
           <SidebarGroupLabel className="h-auto px-0 pb-0 pt-0">
             {!collapsed ? (
               <div className="w-full">
-                <div className="flex items-center gap-3 px-1">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-foreground">Инструменты ИИ</div>
-                  <div className="text-[10px] text-muted-foreground">Модели и сервисы</div>
-                </div>
-                </div>
+                <NavLink
+                  to="/ai"
+                  onClick={() => setOpenMobile(false)}
+                  className="flex items-center gap-3 rounded-lg px-1 transition-colors hover:text-foreground/90"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-foreground">Инструменты ИИ</div>
+                    <div className="text-[10px] text-muted-foreground">Модели и сервисы</div>
+                  </div>
+                </NavLink>
                 <div className="mt-3 h-px bg-border/70" />
               </div>
             ) : (
@@ -242,7 +213,6 @@ export function AppSidebar() {
             )}
           </SidebarGroupLabel>
           <SidebarGroupContent className={!collapsed ? "pt-3" : undefined}>
-            {renderToolsHubMenuItem()}
             {!collapsed && freeToolItems.length > 0 && renderToolMenu(freeToolItems)}
             {!collapsed && paidToolItems.length > 0 && renderToolMenu(paidToolItems)}
             {collapsed && renderToolMenu([...freeToolItems, ...paidToolItems])}

@@ -4,7 +4,6 @@ import {
   AudioLines,
   FileText,
   ImageIcon,
-  SidebarIcon,
   Sparkles,
   Stars,
   Wand2,
@@ -29,11 +28,11 @@ import {
 import { cn } from "@/lib/utils";
 
 const accentClassMap: Record<AIToolAccent, string> = {
-  violet: "from-primary/16 via-primary/10 to-primary/5",
-  emerald: "from-emerald-500/16 via-emerald-500/10 to-emerald-500/5",
-  amber: "from-amber-500/18 via-amber-500/10 to-amber-500/5",
-  sky: "from-sky-500/16 via-sky-500/10 to-sky-500/5",
-  pink: "from-fuchsia-500/16 via-pink-500/10 to-pink-500/5",
+  violet: "from-primary/18 via-primary/12 to-white/92",
+  emerald: "from-emerald-500/18 via-emerald-500/12 to-white/92",
+  amber: "from-amber-500/20 via-amber-500/12 to-white/92",
+  sky: "from-sky-500/18 via-sky-500/12 to-white/92",
+  pink: "from-fuchsia-500/18 via-pink-500/12 to-white/92",
 };
 
 const accentBorderMap: Record<AIToolAccent, string> = {
@@ -82,14 +81,14 @@ function ToolCard({
   return (
     <article
       className={cn(
-        "group relative overflow-hidden rounded-[28px] border bg-card/92 shadow-soft backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        "group relative overflow-hidden rounded-[28px] border bg-card shadow-soft backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
         accentBorderMap[tool.accent],
         featured ? "p-5 md:p-6" : "p-4 md:p-5",
       )}
     >
       <div
         className={cn(
-          "absolute inset-0 bg-gradient-to-br opacity-80",
+          "absolute inset-0 bg-gradient-to-br opacity-100",
           accentClassMap[tool.accent],
         )}
       />
@@ -111,15 +110,15 @@ function ToolCard({
                   {getAIToolAccessLabel(tool.access)}
                 </span>
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/85 px-2.5 py-1">
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-foreground/72">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-white/88 px-2.5 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
                   <CategoryIcon className="h-3.5 w-3.5" />
                   {category.label}
                 </span>
                 {tool.highlights.slice(0, featured ? 2 : 1).map((highlight) => (
                   <span
                     key={highlight}
-                    className="rounded-full border border-border/60 bg-background/85 px-2.5 py-1"
+                    className="rounded-full border border-border/70 bg-white/88 px-2.5 py-1 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
                   >
                     {highlight}
                   </span>
@@ -142,19 +141,14 @@ function ToolCard({
           {tool.capabilities.map((capability) => (
             <span
               key={capability}
-              className="whitespace-nowrap rounded-full border border-border/60 bg-background/88 px-3 py-1.5 text-xs font-medium text-foreground/85"
+              className="whitespace-nowrap rounded-full border border-border/75 bg-white/94 px-3 py-1.5 text-xs font-medium text-foreground/90 shadow-[0_1px_2px_rgba(15,23,42,0.06)]"
             >
               {capability}
             </span>
           ))}
         </div>
 
-        <div className="mt-5 flex items-center justify-between gap-3">
-          <p className="line-clamp-1 text-xs text-muted-foreground">
-            {tool.recommendedFor.includes("ai_user")
-              ? "Подходит для AI-пользователей и обычных пользователей"
-              : "Подходит для быстрых специализированных задач"}
-          </p>
+        <div className="mt-5 flex justify-end">
           <Button
             asChild
             size={featured ? "default" : "sm"}
@@ -294,24 +288,24 @@ export default function AIToolsHome() {
 
             <div className="space-y-3">
               {!isAIUser && (
-                <div className="glass-card rounded-[26px] p-3.5">
+                <div className="rounded-[26px] border border-white/26 bg-white/92 p-3.5 text-foreground shadow-[0_16px_40px_rgba(255,255,255,0.14)] backdrop-blur-xl">
                   <BalanceWidget />
                 </div>
               )}
-              <div className="glass-card rounded-[26px] p-4 text-white">
-                <div className="ai-kicker text-white/65">Быстрый старт</div>
+              <div className="rounded-[26px] border border-white/24 bg-white/16 p-4 text-white shadow-[0_16px_40px_rgba(22,28,45,0.16)] backdrop-blur-xl">
+                <div className="ai-kicker text-white/78">Быстрый старт</div>
                 <div className="mt-2 space-y-2.5">
                   {recommendedTools.slice(0, 2).map((tool) => (
                     <NavLink
                       key={tool.id}
                       to={tool.url}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-white/16 bg-white/12 px-3.5 py-3 transition-colors hover:bg-white/18"
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-white/24 bg-white/14 px-3.5 py-3 transition-colors hover:bg-white/22"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-white">
                           {tool.title}
                         </p>
-                        <p className="line-clamp-1 text-xs text-white/72">
+                        <p className="line-clamp-1 text-xs text-white/80">
                           {tool.shortDescription}
                         </p>
                       </div>
@@ -379,7 +373,7 @@ export default function AIToolsHome() {
               return (
                 <article
                   key={item.title}
-                  className="rounded-[28px] border border-border/60 bg-card/92 p-4 shadow-soft"
+                  className="rounded-[28px] border border-border/70 bg-card p-4 shadow-soft"
                 >
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     <Icon className="h-5 w-5" />
