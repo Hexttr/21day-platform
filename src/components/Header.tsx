@@ -9,7 +9,9 @@ import {
   LogOut, 
   Eye,
   X,
-  RefreshCw
+  RefreshCw,
+  Menu,
+  Sparkles,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -171,10 +173,10 @@ export function Header({ onNavigateHome }: HeaderProps) {
           {/* Mobile tools buttons */}
           <div className="flex md:hidden items-center gap-1">
             <NavLink 
-              to="/chatgpt"
+              to="/ai"
               className="flex items-center justify-center w-9 h-9 rounded-lg bg-secondary/50 border border-border/50 hover:bg-secondary transition-colors"
             >
-              <span className="text-base">🤖</span>
+              <Sparkles className="w-4 h-4 text-primary" />
             </NavLink>
             <NavLink 
               to="/gemini"
@@ -217,9 +219,9 @@ export function Header({ onNavigateHome }: HeaderProps) {
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-xs text-muted-foreground">Инструменты</DropdownMenuLabel>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <NavLink to="/chatgpt" className="flex items-center gap-2">
-                  <span className="text-base">🤖</span>
-                  ChatGPT
+                <NavLink to="/ai" className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  Все инструменты
                 </NavLink>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">

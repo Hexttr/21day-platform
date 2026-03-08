@@ -41,7 +41,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
 
   const goHome = () => {
-    const target = user?.role === 'ai_user' ? '/chatgpt' : '/';
+    const target = user?.role === 'ai_user' ? '/ai' : '/';
     navigate(target);
     setOpenMobile(false);
   };
@@ -130,6 +130,39 @@ export function AppSidebar() {
     </SidebarMenu>
   );
 
+  const renderToolsHubMenuItem = () => {
+    const isActive = location.pathname === '/ai';
+
+    return (
+      <SidebarMenu className="mb-2 gap-1.5">
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            asChild
+            isActive={isActive}
+            tooltip="Все инструменты"
+            className={getMenuButtonClass(isActive)}
+          >
+            <NavLink
+              to="/ai"
+              className="flex items-center gap-3"
+              onClick={() => setOpenMobile(false)}
+            >
+              <span className={cn(
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                isActive
+                  ? "border-primary/15 bg-primary/10 text-primary"
+                  : "border-border/40 bg-background/80 text-muted-foreground",
+              )}>
+                <Sparkles className="h-4 w-4" />
+              </span>
+              {!collapsed && <span className="font-medium">Все инструменты</span>}
+            </NavLink>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  };
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
       {/* ── Logo + collapse button ── */}
@@ -148,7 +181,7 @@ export function AppSidebar() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <NavLink to={user?.role === 'ai_user' ? '/chatgpt' : '/'} className="flex justify-center">
+            <NavLink to={user?.role === 'ai_user' ? '/ai' : '/'} className="flex justify-center">
               <div className="w-11 h-11 rounded-xl gradient-hero flex items-center justify-center shadow-glow">
                 <span className="text-white font-extrabold text-lg tracking-tight">21</span>
               </div>
@@ -209,6 +242,7 @@ export function AppSidebar() {
             )}
           </SidebarGroupLabel>
           <SidebarGroupContent className={!collapsed ? "pt-3" : undefined}>
+            {renderToolsHubMenuItem()}
             {!collapsed && freeToolItems.length > 0 && renderToolMenu(freeToolItems)}
             {!collapsed && paidToolItems.length > 0 && renderToolMenu(paidToolItems)}
             {collapsed && renderToolMenu([...freeToolItems, ...paidToolItems])}

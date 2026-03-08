@@ -16,7 +16,7 @@ const Index = () => {
   }
 
   if (!isAuthenticated) return <LoginForm />;
-  if (user?.role === 'ai_user') return <Navigate to="/chatgpt" replace />;
+  if (user?.role === 'ai_user') return <Navigate to="/ai" replace />;
   return <Dashboard />;
 };
 

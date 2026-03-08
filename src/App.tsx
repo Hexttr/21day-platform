@@ -15,6 +15,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { AppFooter } from "@/components/AppFooter";
 
 const Index = React.lazy(() => import("./pages/Index"));
+const AIToolsHome = React.lazy(() => import("./pages/AIToolsHome"));
 const ChatGPT = React.lazy(() => import("./pages/ChatGPT"));
 const Claude = React.lazy(() => import("./pages/Claude"));
 const Gemini = React.lazy(() => import("./pages/Gemini"));
@@ -52,7 +53,7 @@ const RouteFallback = () => (
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
-  const aiToolRoutes = ['/chatgpt', '/claude', '/gemini', '/groq', '/edge-tts', '/nanobanana'];
+  const aiToolRoutes = ['/ai', '/chatgpt', '/claude', '/gemini', '/groq', '/edge-tts', '/nanobanana'];
   const isAIToolRoute = aiToolRoutes.includes(location.pathname);
   const hideFooter = isAIToolRoute;
 
@@ -116,6 +117,14 @@ const App = () => (
                     element={
                       <AppLayout>
                         <Index />
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/ai"
+                    element={
+                      <AppLayout>
+                        <AIToolsHome />
                       </AppLayout>
                     }
                   />
