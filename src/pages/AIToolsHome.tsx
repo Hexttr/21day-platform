@@ -380,15 +380,17 @@ export default function AIToolsHome() {
                     />
                   </div>
                   <div className="flex flex-1 flex-col p-4">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {item.description}
-                    </p>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        {item.description}
+                      </p>
+                    </div>
                     <Button
                       asChild
-                      className="mt-6 h-10 rounded-xl shadow-xs md:mt-auto"
+                      className="mt-2 h-10 rounded-xl shadow-xs md:mt-auto"
                     >
                       <NavLink to={item.href}>
                         {item.label}
