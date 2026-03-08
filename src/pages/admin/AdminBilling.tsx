@@ -146,54 +146,54 @@ function ProviderCard({ provider, modelCount, onUpdate }: { provider: AIProvider
     finally { setDeleting(false); }
   };
   return (
-    <div className="bg-card rounded-2xl border border-border/50 shadow-soft p-5 space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">key: {provider.name}</span>
-        <div className="flex items-center gap-2">
+    <div className="rounded-2xl border border-border/70 bg-card/95 p-4 shadow-soft backdrop-blur-sm md:p-5 md:space-y-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <span className="break-all text-xs text-muted-foreground">key: {provider.name}</span>
+        <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-2 text-xs">
             <input type="checkbox" checked={edit.isActive} onChange={(e) => setEdit({ ...edit, isActive: e.target.checked })} />
             Активен
           </label>
-          <button onClick={deleteProvider} disabled={deleting} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+          <button onClick={deleteProvider} disabled={deleting} className="rounded-lg border border-border/60 bg-background/85 p-1.5 text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className="text-xs text-muted-foreground">Отображаемое имя</label>
           <input value={edit.displayName} onChange={(e) => setEdit({ ...edit, displayName: e.target.value })}
-            className="w-full h-8 rounded-lg border border-border/50 bg-secondary/30 px-2 text-xs outline-none focus:border-primary" />
+            className="w-full h-9 rounded-lg border border-border/60 bg-background/90 px-3 text-xs outline-none transition-colors focus:border-primary" />
         </div>
         <div>
           <label className="text-xs text-muted-foreground">Env переменная</label>
           <input value={edit.apiKeyEnv} onChange={(e) => setEdit({ ...edit, apiKeyEnv: e.target.value })}
             placeholder="GEMINI_API_KEY"
-            className="w-full h-8 rounded-lg border border-border/50 bg-secondary/30 px-2 text-xs outline-none focus:border-primary" />
+            className="w-full h-9 rounded-lg border border-border/60 bg-background/90 px-3 text-xs outline-none transition-colors focus:border-primary" />
         </div>
       </div>
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="min-w-0 break-words text-xs text-muted-foreground">
           API-ключ: {keyStatus?.hasStoredKey ? keyStatus.masked || '••••' : 'не сохранён'}
           {keyStatus?.usesEnvFallback ? `, fallback: ${keyStatus.envVar}` : keyStatus?.envVar ? `, env: ${keyStatus.envVar}` : ''}
         </span>
-        <Button size="sm" variant="outline" className="rounded-lg h-7 text-xs" onClick={() => setKeyDialogOpen(true)} disabled={saving}>
+        <Button size="sm" variant="outline" className="h-8 rounded-lg border-border/70 bg-background/90 text-xs shadow-xs hover:bg-background" onClick={() => setKeyDialogOpen(true)} disabled={saving}>
           <KeyRound className="w-3.5 h-3.5" />
           {keyStatus?.hasStoredKey ? 'Заменить ключ' : 'Задать ключ'}
         </Button>
         {keyStatus?.hasStoredKey && (
-          <Button size="sm" variant="outline" className="rounded-lg h-7 text-xs" onClick={clearApiKey} disabled={saving}>
+          <Button size="sm" variant="outline" className="h-8 rounded-lg border-border/70 bg-background/90 text-xs shadow-xs hover:bg-background" onClick={clearApiKey} disabled={saving}>
             Удалить ключ
           </Button>
         )}
-        <Button size="sm" variant="outline" className="rounded-lg h-7 text-xs" onClick={saveProvider} disabled={saving}>
+        <Button size="sm" variant="outline" className="h-8 rounded-lg border-border/70 bg-background/90 text-xs shadow-xs hover:bg-background" onClick={saveProvider} disabled={saving}>
           <Save className="w-3.5 h-3.5" /> Сохранить
         </Button>
         <span className="text-xs text-muted-foreground">Моделей: {modelCount}</span>
       </div>
 
       <Dialog open={keyDialogOpen} onOpenChange={setKeyDialogOpen}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent className="w-[calc(100vw-24px)] max-w-lg rounded-2xl border border-border/60 bg-background/98">
           <DialogHeader>
             <DialogTitle className="font-serif">API-ключ провайдера</DialogTitle>
             <DialogDescription>
@@ -209,7 +209,7 @@ function ProviderCard({ provider, modelCount, onUpdate }: { provider: AIProvider
                 value={keyValue}
                 onChange={(e) => setKeyValue(e.target.value)}
                 placeholder="Введите новый ключ"
-                className="rounded-xl bg-secondary/30 border-border/50"
+                className="rounded-xl border-border/60 bg-background/90"
                 autoComplete="off"
               />
             </div>
@@ -341,19 +341,19 @@ export default function AdminBilling() {
         <SidebarTrigger /> <span className="font-semibold text-sm">Биллинг</span>
       </div>
 
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="container mx-auto max-w-4xl px-4 py-6">
+        <div className="mb-6 flex items-center gap-3">
           <DollarSign className="w-6 h-6 text-primary" />
-          <h1 className="font-serif text-2xl font-semibold text-foreground">Биллинг и AI-модели</h1>
+          <h1 className="min-w-0 text-balance font-serif text-2xl font-semibold text-foreground">Биллинг и AI-модели</h1>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-border/60 bg-card/80 p-2 shadow-soft sm:flex sm:flex-wrap">
           {(['settings', 'models', 'providers', 'analytics'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === t ? 'bg-primary text-white' : 'bg-card border border-border/50 text-foreground hover:bg-secondary/50'}`}
+              className={`min-w-0 rounded-xl border px-3 py-2.5 text-center text-sm font-medium transition-colors ${tab === t ? 'border-primary bg-primary text-white shadow-sm' : 'border-border/70 bg-background/92 text-foreground shadow-xs hover:bg-secondary/70'}`}
             >
               {t === 'settings' ? 'Настройки' : t === 'models' ? 'Модели' : t === 'providers' ? 'Провайдеры' : 'Аналитика'}
             </button>
@@ -362,7 +362,7 @@ export default function AdminBilling() {
 
         {/* Settings tab */}
         {tab === 'settings' && (
-          <div className="bg-card rounded-2xl border border-border/50 shadow-soft p-6 space-y-5">
+          <div className="space-y-5 rounded-2xl border border-border/70 bg-card/95 p-4 shadow-soft md:p-6">
             <div className="flex items-center gap-2 mb-2">
               <Settings className="w-5 h-5 text-primary" />
               <h2 className="font-serif text-lg font-semibold">Настройки платформы</h2>
@@ -388,12 +388,12 @@ export default function AdminBilling() {
                     type="number"
                     value={settings[key] || ''}
                     onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
-                    className="w-full h-10 rounded-xl border border-border/50 bg-secondary/30 px-3 text-sm focus:border-primary outline-none"
+                    className="h-10 w-full rounded-xl border border-border/60 bg-background/90 px-3 text-sm outline-none transition-colors focus:border-primary"
                   />
                 )}
               </div>
             ))}
-            <Button onClick={saveSettings} className="rounded-xl gap-2">
+            <Button onClick={saveSettings} className="gap-2 rounded-xl shadow-xs">
               <Save className="w-4 h-4" /> Сохранить настройки
             </Button>
           </div>
@@ -402,44 +402,44 @@ export default function AdminBilling() {
         {/* Models tab */}
         {tab === 'models' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="font-serif text-lg font-semibold">AI-модели</h2>
-              <Button onClick={addModel} variant="outline" size="sm" className="rounded-xl gap-2">
+              <Button onClick={addModel} variant="outline" size="sm" className="h-9 rounded-xl border-border/70 bg-background/92 gap-2 shadow-xs hover:bg-background sm:self-auto self-start">
                 <Plus className="w-4 h-4" /> Добавить
               </Button>
             </div>
             {models.map((model) => (
-              <div key={model.id} className="bg-card rounded-2xl border border-border/50 shadow-soft p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+              <div key={model.id} className="space-y-3 rounded-2xl border border-border/70 bg-card/95 p-4 shadow-soft md:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
                     <Database className="w-4 h-4 text-primary" />
                     <input
                       value={model.displayName}
                       onChange={(e) => updateModelField(model.id, 'displayName', e.target.value)}
-                      className="text-sm font-semibold bg-transparent border-b border-transparent hover:border-border focus:border-primary outline-none"
+                      className="min-w-0 flex-1 truncate border-b border-transparent bg-transparent text-sm font-semibold outline-none hover:border-border focus:border-primary"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <label className="flex items-center gap-2 text-xs">
                       <input type="checkbox" checked={model.isActive} onChange={(e) => updateModelField(model.id, 'isActive', e.target.checked)} />
                       Активна
                     </label>
-                    <button onClick={() => deleteModel(model.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                    <button onClick={() => deleteModel(model.id)} className="rounded-lg border border-border/60 bg-background/85 p-1.5 text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-4">
                   <div>
                     <label className="text-xs text-muted-foreground">Model key</label>
                     <input value={model.modelKey} onChange={(e) => updateModelField(model.id, 'modelKey', e.target.value)}
-                      className="w-full h-8 rounded-lg border border-border/50 bg-secondary/30 px-2 text-xs outline-none focus:border-primary" />
+                      className="h-9 w-full rounded-lg border border-border/60 bg-background/90 px-3 text-xs outline-none transition-colors focus:border-primary" />
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground">Тип</label>
                     <select value={model.modelType} onChange={(e) => updateModelField(model.id, 'modelType', e.target.value)}
-                      className="w-full h-8 rounded-lg border border-border/50 bg-secondary/30 px-2 text-xs outline-none">
+                      className="h-9 w-full rounded-lg border border-border/60 bg-background/90 px-3 text-xs outline-none">
                       <option value="text">Текст</option>
                       <option value="image">Изображение</option>
                     </select>
@@ -447,43 +447,43 @@ export default function AdminBilling() {
                   <div>
                     <label className="text-xs text-muted-foreground">Провайдер</label>
                     <select value={model.providerId} onChange={(e) => updateModelField(model.id, 'providerId', e.target.value)}
-                      className="w-full h-8 rounded-lg border border-border/50 bg-secondary/30 px-2 text-xs outline-none">
+                      className="h-9 w-full rounded-lg border border-border/60 bg-background/90 px-3 text-xs outline-none">
                       {providers.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground">Порядок</label>
                     <input type="number" value={model.sortOrder} onChange={(e) => updateModelField(model.id, 'sortOrder', parseInt(e.target.value) || 0)}
-                      className="w-full h-8 rounded-lg border border-border/50 bg-secondary/30 px-2 text-xs outline-none focus:border-primary" />
+                      className="h-9 w-full rounded-lg border border-border/60 bg-background/90 px-3 text-xs outline-none transition-colors focus:border-primary" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3">
                   <div>
                     <label className="text-xs text-muted-foreground">Input ₽/1K tok</label>
                     <input value={model.inputPricePer1k} onChange={(e) => updateModelField(model.id, 'inputPricePer1k', e.target.value)}
-                      className="w-full h-8 rounded-lg border border-border/50 bg-secondary/30 px-2 text-xs outline-none focus:border-primary" />
+                      className="h-9 w-full rounded-lg border border-border/60 bg-background/90 px-3 text-xs outline-none transition-colors focus:border-primary" />
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground">Output ₽/1K tok</label>
                     <input value={model.outputPricePer1k} onChange={(e) => updateModelField(model.id, 'outputPricePer1k', e.target.value)}
-                      className="w-full h-8 rounded-lg border border-border/50 bg-secondary/30 px-2 text-xs outline-none focus:border-primary" />
+                      className="h-9 w-full rounded-lg border border-border/60 bg-background/90 px-3 text-xs outline-none transition-colors focus:border-primary" />
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground">Фикс. цена ₽</label>
                     <input value={model.fixedPrice} onChange={(e) => updateModelField(model.id, 'fixedPrice', e.target.value)}
-                      className="w-full h-8 rounded-lg border border-border/50 bg-secondary/30 px-2 text-xs outline-none focus:border-primary" />
+                      className="h-9 w-full rounded-lg border border-border/60 bg-background/90 px-3 text-xs outline-none transition-colors focus:border-primary" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:grid-cols-4">
                   {[
                     { key: 'supportsStreaming', label: 'Streaming' },
                     { key: 'supportsImageInput', label: 'Image input' },
                     { key: 'supportsImageOutput', label: 'Image output' },
                     { key: 'supportsSystemPrompt', label: 'System prompt' },
                   ].map((capability) => (
-                    <label key={capability.key} className="flex items-center gap-2 text-xs text-foreground">
+                    <label key={capability.key} className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/85 px-3 py-2 text-xs text-foreground">
                       <input
                         type="checkbox"
                         checked={Boolean(model[capability.key as keyof AIModel])}
@@ -494,7 +494,7 @@ export default function AdminBilling() {
                   ))}
                 </div>
 
-                <Button onClick={() => saveModel(model)} size="sm" variant="outline" className="rounded-xl gap-2">
+                <Button onClick={() => saveModel(model)} size="sm" variant="outline" className="h-9 rounded-xl border-border/70 bg-background/92 gap-2 shadow-xs hover:bg-background">
                   <Save className="w-3.5 h-3.5" /> Сохранить
                 </Button>
               </div>
@@ -505,9 +505,9 @@ export default function AdminBilling() {
         {/* Providers tab */}
         {tab === 'providers' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="font-serif text-lg font-semibold">AI-провайдеры</h2>
-              <Button onClick={addProvider} variant="outline" size="sm" className="rounded-xl gap-2">
+              <Button onClick={addProvider} variant="outline" size="sm" className="h-9 rounded-xl border-border/70 bg-background/92 gap-2 shadow-xs hover:bg-background sm:self-auto self-start">
                 <Plus className="w-4 h-4" /> Добавить
               </Button>
             </div>
@@ -535,14 +535,14 @@ export default function AdminBilling() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="bg-card rounded-2xl border border-border/50 shadow-soft p-5 space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="font-serif text-lg font-semibold">По типу запросов</h2>
-                  <Button size="sm" variant="outline" className="rounded-xl" onClick={loadAnalytics}>Обновить</Button>
+                  <Button size="sm" variant="outline" className="h-9 self-start rounded-xl border-border/70 bg-background/92 shadow-xs hover:bg-background sm:self-auto" onClick={loadAnalytics}>Обновить</Button>
                 </div>
                 <div className="space-y-3">
                   {usageSummary.requestTypes.map((row) => (
-                    <div key={row.requestType} className="flex items-center justify-between rounded-xl border border-border/50 bg-secondary/20 px-4 py-3">
-                      <div>
+                    <div key={row.requestType} className="flex flex-col gap-2 rounded-xl border border-border/60 bg-background/88 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground">{row.requestType}</p>
                         <p className="text-xs text-muted-foreground">{row.requests} запросов</p>
                       </div>
@@ -556,8 +556,8 @@ export default function AdminBilling() {
                 <h2 className="font-serif text-lg font-semibold">По провайдерам</h2>
                 <div className="space-y-3">
                   {usageSummary.providerStats.map((row) => (
-                    <div key={row.providerName} className="flex items-center justify-between rounded-xl border border-border/50 bg-secondary/20 px-4 py-3">
-                      <div>
+                    <div key={row.providerName} className="flex flex-col gap-2 rounded-xl border border-border/60 bg-background/88 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground">{row.providerName}</p>
                         <p className="text-xs text-muted-foreground">{row.requests} запросов</p>
                       </div>
@@ -572,10 +572,10 @@ export default function AdminBilling() {
               <h2 className="font-serif text-lg font-semibold">Топ инструментов и моделей</h2>
               <div className="space-y-3">
                 {usageSummary.topModels.map((row, index) => (
-                  <div key={`${row.providerName}-${row.modelName}-${row.requestType}-${index}`} className="flex items-center justify-between rounded-xl border border-border/50 bg-secondary/20 px-4 py-3">
-                    <div>
+                  <div key={`${row.providerName}-${row.modelName}-${row.requestType}-${index}`} className="flex flex-col gap-2 rounded-xl border border-border/60 bg-background/88 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground">{row.modelName}</p>
-                      <p className="text-xs text-muted-foreground">{row.providerName} · {row.requestType} · {row.requests} запросов</p>
+                      <p className="text-xs text-muted-foreground break-words">{row.providerName} · {row.requestType} · {row.requests} запросов</p>
                     </div>
                     <p className="text-sm font-semibold text-foreground">{Number(row.revenue).toFixed(2)} ₽</p>
                   </div>
