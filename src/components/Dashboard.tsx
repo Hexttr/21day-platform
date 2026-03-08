@@ -163,7 +163,7 @@ export function Dashboard() {
             </div>
 
             <div className="max-w-xl">
-              <h1 className="font-extrabold text-4xl sm:text-5xl text-white leading-[1.1] mb-4 tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <h1 className="font-extrabold text-4xl max-[360px]:text-[1.85rem] sm:text-5xl text-white leading-[1.1] mb-4 tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 Освойте{' '}
                 <span className="text-white/90 underline decoration-white/30 underline-offset-4">
                   искусственный интеллект

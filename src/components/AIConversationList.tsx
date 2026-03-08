@@ -35,7 +35,7 @@ export function AIConversationList({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-14 items-center justify-between gap-3 border-b border-border/40 px-4 md:h-16">
+      <div className="flex h-14 items-center justify-between gap-3 border-b border-border/40 px-4 pr-12 md:h-16 md:pr-4">
         <div>
           <div className="ai-kicker">Диалоги</div>
           <div className="mt-1 text-sm font-medium text-foreground">{title}</div>

@@ -47,6 +47,7 @@ export function ImageGenerator() {
     'Создай минималистичный логотип для AI-студии',
     'Нарисуй уютную кофейню в японском стиле',
   ];
+  const visibleStarterPrompts = isMobile ? starterPrompts.slice(0, 2) : starterPrompts;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -229,7 +230,7 @@ export function ImageGenerator() {
               Опишите, что хотите создать. Можно прикрепить до {MAX_IMAGES} фото для редактирования или коллажа.
             </p>
             <div className="mt-6 grid w-full max-w-md gap-2.5 md:mt-8 md:gap-3">
-              {starterPrompts.map((suggestion) => (
+              {visibleStarterPrompts.map((suggestion) => (
                 <button
                   key={suggestion}
                   onClick={() => {
@@ -372,10 +373,10 @@ export function ImageGenerator() {
               onKeyDown={handleKeyDown}
               placeholder={
                 sourceImages.length
-                  ? 'Опишите изменения или коллаж...'
+                  ? 'Что изменить?'
                   : willUseLastImage
-                    ? 'Редактировать последнее изображение (например: добавь Карлссона)...'
-                    : 'Опишите, что хотите создать...'
+                    ? 'Что изменить в последнем изображении?'
+                    : 'Опишите задачу...'
               }
               className="min-h-[46px] max-h-[104px] resize-none rounded-xl bg-secondary/30 border-border/50 focus:border-primary text-sm flex-1 md:min-h-[52px] md:max-h-[120px]"
               disabled={isLoading}

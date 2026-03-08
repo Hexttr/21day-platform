@@ -94,7 +94,11 @@ export function AppSidebar() {
           <SidebarMenuItem key={item.title}>
             <div className="flex items-center gap-1 w-full group/item">
               <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className={cn("flex-1", getMenuButtonClass(isActive))}>
-                <NavLink to={item.url} className="flex items-center gap-3">
+                <NavLink
+                  to={item.url}
+                  className="flex items-center gap-3"
+                  onClick={() => setOpenMobile(false)}
+                >
                   {renderToolIcon(item, isActive)}
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="font-medium truncate">{item.title}</span>
@@ -235,7 +239,11 @@ export function AppSidebar() {
                     return (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className={getMenuButtonClass(isActive)}>
-                          <NavLink to={item.url} className="flex items-center gap-3">
+                          <NavLink
+                            to={item.url}
+                            className="flex items-center gap-3"
+                            onClick={() => setOpenMobile(false)}
+                          >
                             <span className={cn(
                               "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors",
                               isActive
