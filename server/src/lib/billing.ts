@@ -4,7 +4,14 @@ import { eq, and, sql, gte } from 'drizzle-orm';
 import { getAllowedPlatformSetting } from './platform-settings.js';
 
 export async function getSetting(key: string): Promise<string | null> {
-  if (key === 'markup_percent' || key === 'daily_free_requests' || key === 'min_topup_amount' || key === 'max_topup_amount' || key === 'free_for_admins') {
+  if (
+    key === 'markup_percent' ||
+    key === 'daily_free_requests' ||
+    key === 'min_topup_amount' ||
+    key === 'max_topup_amount' ||
+    key === 'free_for_admins' ||
+    key === 'analytics_active_user_daily_requests'
+  ) {
     return getAllowedPlatformSetting(key);
   }
   return null;

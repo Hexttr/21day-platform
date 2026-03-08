@@ -177,23 +177,33 @@ export async function billingRoutes(app: FastifyInstance) {
     if (!payload || payload.role !== 'admin') return reply.status(403).send({ error: 'Forbidden' });
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const activeUserThreshold = Math.max(1, parseInt(await getSetting('analytics_active_user_daily_requests') || '5', 10) || 5);
 
     const [overview] = await db
       .select({
         totalRequests: sql<number>`count(*)::int`,
         freeRequests: sql<number>`count(*) filter (where ${aiUsageLog.isFree} = true)::int`,
         paidRequests: sql<number>`count(*) filter (where ${aiUsageLog.isFree} = false)::int`,
-        totalRevenue: sql<string>`coalesce(sum(${aiUsageLog.finalCost}::numeric), 0)::text`,
-        activeUsers: sql<number>`count(distinct ${aiUsageLog.userId})::int`,
+        totalRevenue: sql<string>`coalesce(sum(${aiUsageLog.finalCost}::numeric) filter (where ${aiUsageLog.isFree} = false), 0)::text`,
       })
       .from(aiUsageLog)
       .where(sql`${aiUsageLog.createdAt} >= ${sevenDaysAgo}`);
+
+    const activeUsersRows = await db
+      .select({
+        userId: aiUsageLog.userId,
+      })
+      .from(aiUsageLog)
+      .where(sql`${aiUsageLog.createdAt} >= ${oneDayAgo}`)
+      .groupBy(aiUsageLog.userId)
+      .having(sql`count(*) >= ${activeUserThreshold}`);
 
     const requestTypes = await db
       .select({
         requestType: aiUsageLog.requestType,
         requests: sql<number>`count(*)::int`,
-        revenue: sql<string>`coalesce(sum(${aiUsageLog.finalCost}::numeric), 0)::text`,
+        revenue: sql<string>`coalesce(sum(${aiUsageLog.finalCost}::numeric) filter (where ${aiUsageLog.isFree} = false), 0)::text`,
       })
       .from(aiUsageLog)
       .where(sql`${aiUsageLog.createdAt} >= ${sevenDaysAgo}`)
@@ -204,7 +214,7 @@ export async function billingRoutes(app: FastifyInstance) {
       .select({
         providerName: sql<string>`coalesce(${aiProviders.displayName}, 'Без провайдера')`,
         requests: sql<number>`count(*)::int`,
-        revenue: sql<string>`coalesce(sum(${aiUsageLog.finalCost}::numeric), 0)::text`,
+        revenue: sql<string>`coalesce(sum(${aiUsageLog.finalCost}::numeric) filter (where ${aiUsageLog.isFree} = false), 0)::text`,
       })
       .from(aiUsageLog)
       .leftJoin(aiModels, eq(aiUsageLog.modelId, aiModels.id))
@@ -219,7 +229,7 @@ export async function billingRoutes(app: FastifyInstance) {
         providerName: sql<string>`coalesce(${aiProviders.displayName}, 'Локальный браузер')`,
         requestType: aiUsageLog.requestType,
         requests: sql<number>`count(*)::int`,
-        revenue: sql<string>`coalesce(sum(${aiUsageLog.finalCost}::numeric), 0)::text`,
+        revenue: sql<string>`coalesce(sum(${aiUsageLog.finalCost}::numeric) filter (where ${aiUsageLog.isFree} = false), 0)::text`,
       })
       .from(aiUsageLog)
       .leftJoin(aiModels, eq(aiUsageLog.modelId, aiModels.id))
@@ -230,11 +240,16 @@ export async function billingRoutes(app: FastifyInstance) {
       .limit(8);
 
     return reply.send({
-      overview,
+      overview: {
+        ...overview,
+        activeUsers: activeUsersRows.length,
+      },
       requestTypes,
       providerStats,
       topModels,
       windowDays: 7,
+      activeUserWindowHours: 24,
+      activeUserThreshold,
     });
   });
 

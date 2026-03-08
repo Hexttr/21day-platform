@@ -421,6 +421,7 @@ async function seedBilling() {
     { key: 'min_topup_amount', value: '100', description: 'Минимальная сумма пополнения (RUB)' },
     { key: 'max_topup_amount', value: '10000', description: 'Максимальная сумма пополнения (RUB)' },
     { key: 'free_for_admins', value: '1', description: 'Бесплатно для администраторов (1=да, 0=нет)' },
+    { key: 'analytics_active_user_daily_requests', value: '5', description: 'Порог запросов за 24 часа для метрики активных пользователей' },
   ];
 
   for (const s of settingsSeeds) {

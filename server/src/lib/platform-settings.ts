@@ -8,6 +8,7 @@ export const ALLOWED_PLATFORM_SETTINGS = [
   'min_topup_amount',
   'max_topup_amount',
   'free_for_admins',
+  'analytics_active_user_daily_requests',
 ] as const;
 
 export type AllowedPlatformSettingKey = typeof ALLOWED_PLATFORM_SETTINGS[number];

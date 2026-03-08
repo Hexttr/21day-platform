@@ -46,6 +46,8 @@ interface UsageSummary {
     revenue: string;
   }>;
   windowDays: number;
+  activeUserWindowHours: number;
+  activeUserThreshold: number;
 }
 
 interface ProviderKeyStatus {
@@ -61,6 +63,7 @@ const SETTINGS_FIELDS = [
   { key: 'min_topup_amount', label: 'Мин. сумма пополнения (₽)', hint: '', type: 'number' as const },
   { key: 'max_topup_amount', label: 'Макс. сумма пополнения (₽)', hint: '', type: 'number' as const },
   { key: 'free_for_admins', label: 'Бесплатно для администраторов', hint: 'Админы не тратят баланс при использовании AI (чат, изображения, квиз)', type: 'boolean' as const },
+  { key: 'analytics_active_user_daily_requests', label: 'Порог активного пользователя за 24 часа', hint: 'Если пользователь сделал не меньше этого числа AI-запросов за последние 24 часа, он считается активным в аналитике', type: 'number' as const },
 ] as const;
 
 function ProviderCard({ provider, modelCount, onUpdate }: { provider: AIProvider; modelCount: number; onUpdate: () => void }) {
@@ -522,9 +525,9 @@ export default function AdminBilling() {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 { label: 'Запросов', value: usageSummary.overview.totalRequests },
-                { label: 'Активных пользователей', value: usageSummary.overview.activeUsers },
+                { label: `Активных пользователей (>= ${usageSummary.activeUserThreshold} за ${usageSummary.activeUserWindowHours} ч)`, value: usageSummary.overview.activeUsers },
                 { label: 'Бесплатных запросов', value: usageSummary.overview.freeRequests },
-                { label: `Выручка за ${usageSummary.windowDays} дней`, value: `${Number(usageSummary.overview.totalRevenue).toFixed(2)} ₽` },
+                { label: `Платная выручка за ${usageSummary.windowDays} дней`, value: `${Number(usageSummary.overview.totalRevenue).toFixed(2)} ₽` },
               ].map((card) => (
                 <div key={card.label} className="bg-card rounded-2xl border border-border/50 shadow-soft p-5">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{card.label}</p>
