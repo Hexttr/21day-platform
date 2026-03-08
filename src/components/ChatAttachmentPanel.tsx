@@ -3,6 +3,7 @@ import { FileText, Loader2, Paperclip, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { apiUpload } from '@/api/client';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const IMAGE_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif'];
 const DOCUMENT_ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.xls', '.xlsx', '.csv', '.pptx', '.txt', '.md', '.json'];
@@ -65,6 +66,7 @@ export function ChatAttachmentPanel({
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadingDocuments, setUploadingDocuments] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   const accept = useMemo(() => {
     const values: string[] = [];
@@ -184,6 +186,11 @@ export function ChatAttachmentPanel({
   };
 
   const hasAnyAttachments = images.length > 0 || attachments.length > 0 || uploadingDocuments.length > 0;
+  const attachmentSummary = [
+    images.length > 0 ? `${images.length} изображ.` : null,
+    attachments.length > 0 ? `${attachments.length} докум.` : null,
+    uploadingDocuments.length > 0 ? `Загрузка ${uploadingDocuments.length}` : null,
+  ].filter(Boolean).join(' · ');
 
   return (
     <div
@@ -225,12 +232,19 @@ export function ChatAttachmentPanel({
 
       {hasAnyAttachments && (
         <div className="ai-soft-panel mb-3 space-y-3 p-3">
-          <div className="ai-kicker">Вложения к запросу</div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="ai-kicker">Вложения к запросу</div>
+              {isMobile && attachmentSummary && (
+                <div className="mt-1 text-[11px] text-muted-foreground">{attachmentSummary}</div>
+              )}
+            </div>
+          </div>
           {images.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className={`gap-2 ${isMobile ? 'flex overflow-x-auto pb-1' : 'flex flex-wrap'}`}>
               {images.map((url, index) => (
-                <div key={`${url}-${index}`} className="relative rounded-2xl border border-border/50 bg-background/90 p-1 shadow-xs">
-                  <img src={url} alt="" className="w-14 h-14 rounded-xl object-cover" />
+                <div key={`${url}-${index}`} className="relative shrink-0 rounded-2xl border border-border/50 bg-background/90 p-1 shadow-xs">
+                  <img src={url} alt="" className={`${isMobile ? 'h-12 w-12' : 'w-14 h-14'} rounded-xl object-cover`} />
                   <button
                     type="button"
                     onClick={() => removeImage(index)}
@@ -244,11 +258,11 @@ export function ChatAttachmentPanel({
           )}
 
           {(attachments.length > 0 || uploadingDocuments.length > 0) && (
-            <div className="flex flex-wrap gap-2">
+            <div className={`gap-2 ${isMobile ? 'flex overflow-x-auto pb-1' : 'flex flex-wrap'}`}>
               {attachments.map((attachment) => (
                 <div
                   key={attachment.id}
-                  className="ai-context-chip max-w-full"
+                  className={`ai-context-chip ${isMobile ? 'max-w-[220px] shrink-0' : 'max-w-full'}`}
                 >
                   <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <div className="min-w-0">
@@ -273,7 +287,7 @@ export function ChatAttachmentPanel({
               {uploadingDocuments.map((name) => (
                 <div
                   key={name}
-                  className="ai-context-chip max-w-full items-center"
+                  className={`ai-context-chip items-center ${isMobile ? 'max-w-[220px] shrink-0' : 'max-w-full'}`}
                 >
                   <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
                   <div className="min-w-0">

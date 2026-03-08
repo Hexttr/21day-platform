@@ -368,6 +368,16 @@
   }
 }
 
+@media (max-width: 767px) {
+  .mesh-bg {
+    background-attachment: scroll;
+  }
+
+  .ai-reading-surface {
+    border-radius: 24px;
+  }
+}
+
 /* Keyframes */
 @keyframes fadeIn {
   from { opacity: 0; }

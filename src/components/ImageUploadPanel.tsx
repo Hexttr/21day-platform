@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const DEFAULT_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif'];
 
@@ -34,6 +35,7 @@ export function ImageUploadPanel({
 }: ImageUploadPanelProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   const processFiles = async (files: File[]) => {
     if (!files.length) return;
@@ -124,10 +126,10 @@ export function ImageUploadPanel({
       />
 
       {images.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2 p-3 rounded-xl bg-secondary/30 border border-border/50">
+        <div className={`mb-3 gap-2 rounded-xl border border-border/50 bg-secondary/30 p-3 ${isMobile ? 'flex overflow-x-auto' : 'flex flex-wrap'}`}>
           {images.map((url, index) => (
             <div key={`${url}-${index}`} className="relative flex-shrink-0">
-              <img src={url} alt="" className="w-14 h-14 rounded-lg object-cover border border-border/50" />
+              <img src={url} alt="" className={`${isMobile ? 'h-12 w-12' : 'w-14 h-14'} rounded-lg object-cover border border-border/50`} />
               <button
                 type="button"
                 onClick={() => removeImage(index)}

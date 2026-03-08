@@ -101,7 +101,7 @@ export function ModelSelector({ type, selectedModelId, onSelect, onModelChange, 
   };
 
   const renderOptions = () => (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       {filteredModels.map((model) => {
         const provider = providers.find((p) => p.id === model.providerId);
         const isSelected = model.id === selectedModelId;
@@ -113,8 +113,10 @@ export function ModelSelector({ type, selectedModelId, onSelect, onModelChange, 
               onSelect(model.id);
               setIsOpen(false);
             }}
-            className={`w-full rounded-xl px-3 py-3 text-left transition-colors ${
-              isSelected ? 'bg-primary/10 text-primary' : 'hover:bg-secondary/60 text-foreground'
+            className={`w-full rounded-2xl border px-3 py-3 text-left transition-colors ${
+              isSelected
+                ? 'border-primary/20 bg-primary/10 text-primary shadow-xs'
+                : 'border-border/50 bg-background/80 text-foreground hover:border-primary/15 hover:bg-secondary/50'
             }`}
           >
             <div className="flex items-center justify-between gap-3">
@@ -152,7 +154,7 @@ export function ModelSelector({ type, selectedModelId, onSelect, onModelChange, 
 
   if (!loaded || filteredModels.length === 0) return null;
 
-  const triggerClassName = `flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 border border-border/50 hover:border-primary/40 text-sm font-medium text-foreground transition-colors ${className || ''}`;
+  const triggerClassName = `flex items-center gap-2 px-3 py-2 rounded-full bg-secondary/45 border border-border/50 hover:border-primary/40 text-sm font-medium text-foreground transition-colors ${className || ''}`;
 
   if (isMobile) {
     return (
@@ -162,14 +164,21 @@ export function ModelSelector({ type, selectedModelId, onSelect, onModelChange, 
           <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetContent side="bottom" className="rounded-t-2xl px-4 pb-6 pt-8">
+          <SheetContent side="bottom" className="rounded-t-[28px] px-4 pb-6 pt-8">
             <SheetHeader className="mb-4">
               <SheetTitle className="font-serif">{selectorTitle}</SheetTitle>
               <SheetDescription>
-                Выберите модель для текущего инструмента. Список открывается поверх интерфейса и не двигает страницу.
+                Выберите модель для текущего инструмента.
               </SheetDescription>
             </SheetHeader>
-            <div className="max-h-[60vh] overflow-y-auto">
+            {selected && (
+              <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/8 px-4 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/80">Текущая модель</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">{selected.displayName}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{getModelHint(selected)}</div>
+              </div>
+            )}
+            <div className="max-h-[62vh] overflow-y-auto pr-1">
               {renderOptions()}
             </div>
           </SheetContent>

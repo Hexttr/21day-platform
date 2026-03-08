@@ -1,6 +1,7 @@
 import React from 'react';
 import { MessageSquarePlus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { buildConversationPreview, type ChatConversationRecord } from '@/lib/ai-conversations';
 
 type AIConversationListProps = {
@@ -30,14 +31,16 @@ export function AIConversationList({
   onSelectConversation,
   onDeleteConversation,
 }: AIConversationListProps) {
+  const isMobile = useIsMobile();
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-16 items-center justify-between gap-3 border-b border-border/40 px-4">
+      <div className="flex h-14 items-center justify-between gap-3 border-b border-border/40 px-4 md:h-16">
         <div>
           <div className="ai-kicker">Диалоги</div>
           <div className="mt-1 text-sm font-medium text-foreground">{title}</div>
         </div>
-        <Button onClick={onNewChat} size="sm" className="rounded-xl gap-2 shadow-soft">
+        <Button onClick={onNewChat} size="sm" className="rounded-xl gap-2 shadow-soft h-9">
           <MessageSquarePlus className="h-4 w-4" />
           Новый
         </Button>
@@ -49,7 +52,7 @@ export function AIConversationList({
             Здесь появятся ваши диалоги. Новый чат создастся автоматически после первого сообщения.
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5 md:space-y-2">
             {conversations.map((conversation) => {
               const isActive = conversation.id === activeConversationId;
               return (
@@ -64,7 +67,7 @@ export function AIConversationList({
                   }}
                   role="button"
                   tabIndex={0}
-                  className={`group w-full rounded-2xl border px-3 py-3 text-left transition-all ${
+                  className={`group w-full rounded-2xl border px-3 py-2.5 text-left transition-all md:py-3 ${
                     isActive
                       ? 'border-primary/30 bg-primary/10 shadow-soft'
                       : 'border-border/50 bg-background/65 hover:border-primary/20 hover:bg-background/95 hover:shadow-xs'
@@ -73,7 +76,7 @@ export function AIConversationList({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium text-foreground">{conversation.title}</div>
-                      <div className="mt-1.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                      <div className={`mt-1 text-xs text-muted-foreground ${isMobile ? 'line-clamp-1 leading-[1.15rem]' : 'line-clamp-2 leading-5'}`}>
                         {buildConversationPreview(conversation.messages)}
                       </div>
                     </div>
@@ -83,13 +86,15 @@ export function AIConversationList({
                         event.stopPropagation();
                         onDeleteConversation(conversation.id);
                       }}
-                      className="rounded-lg p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                      className={`rounded-lg p-1.5 text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive ${
+                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
                       title="Удалить диалог"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/65">
+                  <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/65 md:mt-2 md:text-[11px]">
                     {formatTimestamp(conversation.updatedAt)}
                   </div>
                 </div>

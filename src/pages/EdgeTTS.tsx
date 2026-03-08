@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Mic, Pause, Play, Square, Volume2 } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { BalanceWidget } from '@/components/BalanceWidget';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -130,10 +129,10 @@ export default function EdgeTTS() {
   ];
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'hsl(248deg 100% 94.56%)' }}>
-      <div className="h-screen flex flex-col">
-        <header className="md:hidden flex-shrink-0 border-b border-border/50 bg-card/80 backdrop-blur-xl sticky top-0 z-10">
-          <div className="flex items-center justify-between px-4 h-16">
+    <div className="h-full min-h-0 min-[0px]:min-h-[100dvh] md:min-h-0" style={{ backgroundColor: 'hsl(248deg 100% 94.56%)' }}>
+      <div className="flex h-full min-h-0 flex-col">
+        <header className="md:hidden sticky top-0 z-10 flex-shrink-0 border-b border-border/50 bg-card/80 backdrop-blur-xl">
+          <div className="flex h-16 items-center justify-between px-3">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors" />
               <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-soft bg-card border border-border/50">
@@ -149,32 +148,31 @@ export default function EdgeTTS() {
                 </div>
               </div>
             </div>
-            <BalanceWidget compact />
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto min-[1920px]:max-w-[78%] px-4 py-5 space-y-5">
-            <div className="flex flex-col items-center justify-center text-center animate-fade-in-up pt-3">
-              <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-4 shadow-large bg-card border border-border/50">
+          <div className="mx-auto max-w-3xl min-[1920px]:max-w-[78%] px-3 py-4 space-y-4 md:px-4 md:py-5 md:space-y-5">
+            <div className="flex flex-col items-center justify-center pt-1 text-center animate-fade-in-up md:pt-3">
+              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl border border-border/50 bg-card shadow-large md:mb-4 md:h-16 md:w-16">
                 <Mic className="w-8 h-8 text-primary" />
               </div>
-              <h2 className="font-serif text-[28px] font-semibold text-foreground mb-2">Озвучьте текст бесплатно</h2>
-              <div className="flex items-center gap-2 mb-2">
+              <h2 className="mb-2 font-serif text-2xl font-semibold text-foreground md:text-[28px]">Озвучьте текст бесплатно</h2>
+              <div className="mb-2 flex items-center gap-2">
                 <span className={`inline-flex items-center rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${getAIToolBadge('free')}`}>
                   Бесплатно
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground max-w-md leading-7">
+              <p className="max-w-md text-sm leading-6 text-muted-foreground md:leading-7">
                 Озвучка идёт прямо в вашем браузере через Web Speech API. Голоса и качество зависят от браузера и операционной системы.
               </p>
-              <div className="mt-6 grid gap-2.5 w-full max-w-lg">
+              <div className="mt-5 grid w-full max-w-lg gap-2 md:mt-6 md:gap-2.5">
                 {starterSuggestions.map((suggestion) => (
                   <button
                     key={suggestion}
                     type="button"
                     onClick={() => setText(suggestion)}
-                    className="text-left px-4 py-3 rounded-xl bg-card border border-border/60 shadow-soft hover:shadow-md hover:border-primary/40 hover:bg-primary/5 text-sm font-medium text-foreground transition-all duration-200 group"
+                    className="group rounded-xl border border-border/60 bg-card px-4 py-3 text-left text-sm font-medium text-foreground shadow-soft transition-all duration-200 hover:border-primary/40 hover:bg-primary/5 hover:shadow-md"
                   >
                     <span className="text-primary group-hover:text-primary mr-2">→</span>
                     {suggestion}
@@ -183,14 +181,14 @@ export default function EdgeTTS() {
               </div>
             </div>
 
-            <div className="bg-card rounded-2xl border border-border/50 shadow-soft p-4 md:p-5 space-y-4">
+            <div className="space-y-4 rounded-2xl border border-border/50 bg-card p-4 shadow-soft md:p-5">
               {!isSupported && (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900">
                   Этот браузер не поддерживает озвучку через Web Speech API. Лучше всего работает в современных Chrome и Edge.
                 </div>
               )}
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-foreground">Голос</p>
                   <Select value={voice} onValueChange={(value) => setVoice(value as typeof voice)}>
@@ -233,14 +231,14 @@ export default function EdgeTTS() {
                   value={text}
                   onChange={(event) => setText(event.target.value)}
                   placeholder="Введите текст для озвучки..."
-                  className="min-h-[132px] rounded-2xl bg-secondary/30 border-border/50 focus:border-primary text-sm leading-6"
+                  className="min-h-[112px] rounded-2xl bg-secondary/30 border-border/50 focus:border-primary text-sm leading-6 md:min-h-[132px]"
                 />
                 <p className="text-xs text-muted-foreground/70">
                   Текст не уходит на сервер. Нажатие запускает локальную озвучку в вашем браузере.
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
                 <Button
                   onClick={startSpeech}
                   disabled={!text.trim() || !isSupported}
@@ -286,7 +284,7 @@ export default function EdgeTTS() {
             </div>
 
             {isSpeaking && (
-              <div className="bg-card rounded-2xl border border-border/50 shadow-soft p-5 space-y-3">
+              <div className="space-y-3 rounded-2xl border border-border/50 bg-card p-4 shadow-soft md:p-5">
                 <p className="text-sm font-medium text-foreground">Статус</p>
                 <div className="flex items-center gap-2 text-sm text-primary">
                   <Volume2 className="w-4 h-4" />

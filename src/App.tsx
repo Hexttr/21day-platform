@@ -52,7 +52,9 @@ const RouteFallback = () => (
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
-  const hideFooter = ['/chatgpt', '/claude', '/gemini', '/groq', '/edge-tts', '/nanobanana'].includes(location.pathname);
+  const aiToolRoutes = ['/chatgpt', '/claude', '/gemini', '/groq', '/edge-tts', '/nanobanana'];
+  const isAIToolRoute = aiToolRoutes.includes(location.pathname);
+  const hideFooter = isAIToolRoute;
 
   if (!isAuthenticated && !isLoading) {
     if (location.pathname !== "/") {
@@ -73,7 +75,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <main className="flex-1 relative min-w-0 flex flex-col" style={{ backgroundColor: 'hsl(248deg 100% 94.56%)' }}>
-          <div className="flex-1 min-h-0 overflow-auto">{children}</div>
+          <div className={isAIToolRoute ? "flex-1 min-h-0" : "flex-1 min-h-0 overflow-auto"}>{children}</div>
           {!hideFooter && <AppFooter />}
         </main>
       </div>

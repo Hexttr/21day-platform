@@ -9,6 +9,7 @@ import { useChatContext } from '@/contexts/ChatContext';
 import { resizeImageForUpload, resizeForStorage } from '@/lib/imageUtils';
 import { putFullImage, getFullImage } from '@/lib/imageStore';
 import { ImageUploadPanel } from '@/components/ImageUploadPanel';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const STORAGE_KEY = 'ai-chat-nanobanana';
 const MAX_IMAGES = 14;
@@ -38,6 +39,7 @@ export function ImageGenerator() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { refreshBalance } = useBalance();
   const chatContext = useChatContext();
+  const isMobile = useIsMobile();
 
   const starterPrompts = [
     'Сгенерируй кота на велосипеде в стиле акварели',
@@ -214,19 +216,19 @@ export function ImageGenerator() {
   };
 
   return (
-    <div className="flex flex-col gap-4 py-4 h-full min-h-0">
+    <div className="flex h-full min-h-0 flex-col gap-3 py-3 md:gap-4 md:py-4">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto min-h-0 space-y-4 -mx-1 px-1">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 -mx-1 px-1 md:space-y-4">
         {messages.length === 0 && !isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in-up">
-            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5 shadow-large overflow-hidden bg-card border border-border/50">
-              <img src="/icons/banano.png" alt="" className="w-14 h-14 object-contain" />
+          <div className="flex flex-col items-center justify-center py-10 text-center animate-fade-in-up md:py-16">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-border/50 bg-card shadow-large overflow-hidden md:mb-5 md:h-20 md:w-20">
+              <img src="/icons/banano.png" alt="" className="h-11 w-11 object-contain md:h-14 md:w-14" />
             </div>
-            <p className="font-serif text-lg font-semibold text-foreground mb-2">Генератор изображений</p>
-            <p className="text-sm text-muted-foreground max-w-sm">
+            <p className="mb-2 font-serif text-lg font-semibold text-foreground">Генератор изображений</p>
+            <p className="max-w-sm text-sm leading-6 text-muted-foreground">
               Опишите, что хотите создать. Можно прикрепить до {MAX_IMAGES} фото для редактирования или коллажа.
             </p>
-            <div className="mt-8 grid gap-3 w-full max-w-md">
+            <div className="mt-6 grid w-full max-w-md gap-2.5 md:mt-8 md:gap-3">
               {starterPrompts.map((suggestion) => (
                 <button
                   key={suggestion}
@@ -234,7 +236,7 @@ export function ImageGenerator() {
                     setPrompt(suggestion);
                     textareaRef.current?.focus();
                   }}
-                  className="text-left px-4 py-3.5 rounded-xl bg-card border border-border/60 shadow-soft hover:shadow-md hover:border-primary/40 hover:bg-primary/5 text-sm font-medium text-foreground transition-all duration-200 group"
+                  className="group rounded-xl border border-border/60 bg-card px-4 py-3 text-left text-sm font-medium text-foreground shadow-soft transition-all duration-200 hover:border-primary/40 hover:bg-primary/5 hover:shadow-md md:py-3.5"
                 >
                   <span className="text-primary group-hover:text-primary mr-2">→</span>
                   {suggestion}
@@ -254,7 +256,7 @@ export function ImageGenerator() {
                 </div>
               )}
               <div
-                className={`max-w-[85%] px-4 py-3 rounded-2xl ${
+              className={`max-w-[90%] px-4 py-3 rounded-2xl md:max-w-[85%] ${
                   msg.role === 'user'
                     ? 'gradient-hero text-primary-foreground rounded-br-sm'
                     : 'bg-card border border-border/50 rounded-bl-sm shadow-soft'
@@ -335,26 +337,28 @@ export function ImageGenerator() {
           </p>
         )}
         footer={(
-          <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
-            <ModelSelector type="image" selectedModelId={selectedModelId} onSelect={setSelectedModelId} />
+          <div className="mt-2 flex items-center justify-between flex-wrap gap-2">
+            <ModelSelector type="image" selectedModelId={selectedModelId} onSelect={setSelectedModelId} className={isMobile ? 'max-w-[68%]' : undefined} />
             <div className="flex items-center gap-3">
               {willUseLastImage && (
-                <span className="text-xs text-primary/80 font-medium">Будет использовано последнее изображение</span>
+                <span className="text-xs text-primary/80 font-medium">Последнее изображение</span>
               )}
-              <p className="text-xs text-muted-foreground/60">
-                PNG, JPEG, WebP до {MAX_FILE_SIZE_MB}MB. Enter — сгенерировать, drag&drop — загрузить
-              </p>
+              {!isMobile && (
+                <p className="text-xs text-muted-foreground/60">
+                  PNG, JPEG, WebP до {MAX_FILE_SIZE_MB}MB. Enter — сгенерировать, drag&drop — загрузить
+                </p>
+              )}
             </div>
           </div>
         )}
       >
         {({ openFilePicker }) => (
-          <div className="flex gap-3 items-end">
+          <div className="flex gap-2.5 items-end md:gap-3">
             <Button
               onClick={openFilePicker}
               variant="outline"
               size="icon"
-              className="h-[52px] w-[52px] shrink-0 rounded-xl border-border/50 hover:border-primary/40"
+              className="h-[46px] w-[46px] shrink-0 rounded-xl border-border/50 hover:border-primary/40 md:h-[52px] md:w-[52px]"
               disabled={isLoading}
               title={`Прикрепить изображения (макс. ${MAX_IMAGES}, до ${MAX_FILE_SIZE_MB}MB)`}
             >
@@ -373,7 +377,7 @@ export function ImageGenerator() {
                     ? 'Редактировать последнее изображение (например: добавь Карлссона)...'
                     : 'Опишите, что хотите создать...'
               }
-              className="min-h-[52px] max-h-[120px] resize-none rounded-xl bg-secondary/30 border-border/50 focus:border-primary text-sm flex-1"
+              className="min-h-[46px] max-h-[104px] resize-none rounded-xl bg-secondary/30 border-border/50 focus:border-primary text-sm flex-1 md:min-h-[52px] md:max-h-[120px]"
               disabled={isLoading}
               rows={1}
             />
@@ -382,7 +386,7 @@ export function ImageGenerator() {
               onClick={generateImage}
               disabled={!prompt.trim() || isLoading}
               size="icon"
-              className="h-[52px] w-[52px] min-w-[52px] shrink-0 rounded-xl gradient-hero hover:opacity-90 shadow-glow disabled:opacity-50 disabled:shadow-none"
+              className="h-[46px] w-[46px] min-w-[46px] shrink-0 rounded-xl gradient-hero hover:opacity-90 shadow-glow disabled:opacity-50 disabled:shadow-none md:h-[52px] md:w-[52px] md:min-w-[52px]"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
