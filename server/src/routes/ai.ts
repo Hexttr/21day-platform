@@ -78,6 +78,46 @@ function createAbortController(req: { raw: NodeJS.EventEmitter & { destroyed?: b
   };
 }
 
+function wasReplyDelivered(reply: FastifyReply): boolean {
+  return Boolean(reply.raw.writableFinished || (reply.raw.writableEnded && !reply.raw.destroyed));
+}
+
+async function sendJsonAndWaitForDelivery(reply: FastifyReply, payload: unknown): Promise<boolean> {
+  return await new Promise<boolean>((resolve, reject) => {
+    let settled = false;
+    const cleanup = () => {
+      reply.raw.off('finish', onFinish);
+      reply.raw.off('close', onClose);
+      reply.raw.off('error', onError);
+    };
+    const finish = (delivered: boolean) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(delivered);
+    };
+    const onFinish = () => finish(true);
+    const onClose = () => finish(wasReplyDelivered(reply));
+    const onError = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    reply.raw.once('finish', onFinish);
+    reply.raw.once('close', onClose);
+    reply.raw.once('error', onError);
+
+    try {
+      reply.send(payload);
+    } catch (error) {
+      cleanup();
+      reject(error);
+    }
+  });
+}
+
 async function resolveKeyOrReply(model: AIResolvedModel, reply: FastifyReply): Promise<string | null> {
   const key = await getProviderApiKey(model.providerId);
   if (!key) {
@@ -183,7 +223,7 @@ async function validateResolvedAttachmentWeight(
   }
 }
 
-async function finalizeUsageBilling(params: {
+async function calculateUsageCost(params: {
   payload: JwtPayload;
   model: AIResolvedModel;
   billing: Awaited<ReturnType<typeof checkBilling>>;
@@ -192,7 +232,7 @@ async function finalizeUsageBilling(params: {
   description: string;
 }): Promise<UsageCost> {
   const markup = await getMarkupPercent();
-  const cost = calculateCost(
+  return calculateCost(
     params.model.modelType,
     parseMoney(params.model.inputPricePer1k),
     parseMoney(params.model.outputPricePer1k),
@@ -201,6 +241,17 @@ async function finalizeUsageBilling(params: {
     params.usage.outputTokens,
     markup,
   );
+}
+
+async function finalizeUsageBilling(params: {
+  payload: JwtPayload;
+  model: AIResolvedModel;
+  billing: Awaited<ReturnType<typeof checkBilling>>;
+  requestType: 'chat' | 'image' | 'quiz';
+  usage: { inputTokens: number; outputTokens: number };
+  description: string;
+}): Promise<UsageCost> {
+  const cost = await calculateUsageCost(params);
 
   const usageId = await logUsage(params.payload.userId, params.model.id, params.requestType, cost, params.billing.isFree);
   if (!params.billing.isFree && cost.finalCost > 0) {
@@ -365,7 +416,7 @@ export async function aiRoutes(app: FastifyInstance) {
 
       if (controller.signal.aborted) return;
 
-      const cost = await finalizeUsageBilling({
+      const cost = await calculateUsageCost({
         payload,
         model,
         billing,
@@ -374,10 +425,27 @@ export async function aiRoutes(app: FastifyInstance) {
         description: 'Image generation',
       });
 
-      return reply.send({
+      const delivered = await sendJsonAndWaitForDelivery(reply, {
         imageUrl: result.imageUrl,
         cost: { finalCost: cost.finalCost, isFree: billing.isFree },
       });
+
+      if (!delivered || controller.signal.aborted) return;
+
+      try {
+        await finalizeUsageBilling({
+          payload,
+          model,
+          billing,
+          requestType: 'image',
+          usage: result.usage,
+          description: 'Image generation',
+        });
+      } catch (error) {
+        req.log.error({ err: error, userId: payload.userId, modelId: model.id }, 'Failed to finalize image billing after response delivery');
+      }
+
+      return;
     } catch (error) {
       if (controller.signal.aborted || isAbortError(error)) return;
       return reply.status(502).send({ error: parseErrorMessage(error) });
@@ -429,20 +497,28 @@ export async function aiRoutes(app: FastifyInstance) {
 
       if (controller.signal.aborted) return;
 
-      await finalizeUsageBilling({
-        payload,
-        model,
-        billing,
-        requestType: 'quiz',
-        usage: result.usage,
-        description: `Quiz: ${result.usage.inputTokens}+${result.usage.outputTokens} tokens`,
-      });
-
-      return reply.send({
+      const delivered = await sendJsonAndWaitForDelivery(reply, {
         response: result.response,
         learningState: result.learningState,
         allPassed: result.allPassed,
       });
+
+      if (!delivered || controller.signal.aborted) return;
+
+      try {
+        await finalizeUsageBilling({
+          payload,
+          model,
+          billing,
+          requestType: 'quiz',
+          usage: result.usage,
+          description: `Quiz: ${result.usage.inputTokens}+${result.usage.outputTokens} tokens`,
+        });
+      } catch (error) {
+        req.log.error({ err: error, userId: payload.userId, modelId: model.id }, 'Failed to finalize quiz billing after response delivery');
+      }
+
+      return;
     } catch (error) {
       if (controller.signal.aborted || isAbortError(error)) return;
       if (learningState) {
