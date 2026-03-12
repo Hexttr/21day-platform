@@ -430,7 +430,7 @@ export default function AIToolsHome() {
                   <ArrowRight className="h-4 w-4" />
                 </Button>
                 <div className="rounded-2xl border border-white/18 bg-white/10 px-4 py-3 text-sm text-white/84 backdrop-blur-sm">
-                  Заявка попадет в текущий лист ожидания, который уже виден админу.
+                  Мы с вами свяжемся и сообщим все подробности курса!
                 </div>
               </div>
             </div>

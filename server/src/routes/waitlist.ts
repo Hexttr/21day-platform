@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { asc } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { waitlist } from '../db/schema.js';
 import { getAuthFromRequest } from '../lib/auth.js';
@@ -33,5 +33,19 @@ export async function waitlistRoutes(app: FastifyInstance) {
     }
     const rows = await db.select().from(waitlist).orderBy(asc(waitlist.createdAt));
     return reply.send(rows);
+  });
+
+  app.delete<{ Params: { id: string } }>('/admin/waitlist/:id', async (req, reply) => {
+    const payload = getAuthFromRequest(req);
+    if (!payload || payload.role !== 'admin') {
+      return reply.status(403).send({ error: 'Требуются права администратора' });
+    }
+
+    const [row] = await db.delete(waitlist).where(eq(waitlist.id, req.params.id)).returning();
+    if (!row) {
+      return reply.status(404).send({ error: 'Заявка не найдена' });
+    }
+
+    return reply.send({ success: true });
   });
 }

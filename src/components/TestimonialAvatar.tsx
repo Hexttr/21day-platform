@@ -26,7 +26,7 @@ export function TestimonialAvatar({
   return (
     <div
       className={cn(
-        "relative shrink-0 overflow-hidden rounded-2xl border border-white/45 bg-white shadow-[0_16px_32px_rgba(76,29,149,0.16)]",
+        "relative shrink-0 overflow-hidden rounded-2xl border border-white/45 bg-transparent shadow-[0_16px_32px_rgba(76,29,149,0.16)]",
         sizeMap[size],
         className,
       )}

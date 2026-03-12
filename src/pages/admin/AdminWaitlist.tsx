@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { toast } from 'sonner';
-import { ClipboardList, Phone, MessageCircle, RefreshCw, Copy, Calendar, Users } from 'lucide-react';
+import { ClipboardList, Phone, MessageCircle, RefreshCw, Copy, Calendar, Users, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -45,6 +45,21 @@ export default function AdminWaitlist() {
   const copyContact = (contact: string) => {
     navigator.clipboard.writeText(contact);
     toast.success('Контакт скопирован');
+  };
+
+  const deleteEntry = async (id: string) => {
+    if (!window.confirm('Удалить эту заявку?')) {
+      return;
+    }
+
+    try {
+      await api(`/admin/waitlist/${id}`, { method: 'DELETE' });
+      setEntries((current) => current.filter((entry) => entry.id !== id));
+      toast.success('Заявка удалена');
+    } catch (error) {
+      console.error('Error deleting waitlist entry:', error);
+      toast.error('Не удалось удалить заявку');
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -153,14 +168,22 @@ export default function AdminWaitlist() {
                   <span className="text-xs">{formatDate(entry.created_at)}</span>
                 </div>
 
-                {/* Copy */}
-                <button
-                  onClick={() => copyContact(entry.contact)}
-                  className="p-2 rounded-lg hover:bg-secondary/70 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-                  title="Скопировать контакт"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => copyContact(entry.contact)}
+                    className="p-2 rounded-lg hover:bg-secondary/70 text-muted-foreground hover:text-foreground transition-colors"
+                    title="Скопировать контакт"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => void deleteEntry(entry.id)}
+                    className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    title="Удалить заявку"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
