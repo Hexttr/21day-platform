@@ -1,4 +1,4 @@
-import { Users, Ticket, Play, ClipboardList, LogOut, BookOpen, X, Trash2, DollarSign, Sparkles, Shield } from "lucide-react";
+import { Users, Ticket, Play, ClipboardList, LogOut, BookOpen, X, Trash2, DollarSign, Sparkles, Shield, MessageCircle } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -28,6 +28,7 @@ const adminItems = [
   { title: "Студенты", url: "/admin/students", icon: Users },
   { title: "Пригл. коды", url: "/admin/codes", icon: Ticket },
   { title: "Лист ожидания", url: "/admin/waitlist", icon: ClipboardList },
+  { title: "Отзывы", url: "/admin/testimonials", icon: MessageCircle },
   { title: "Биллинг и модели", url: "/admin/billing", icon: DollarSign },
 ];
 

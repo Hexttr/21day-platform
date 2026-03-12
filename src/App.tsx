@@ -29,6 +29,7 @@ const AdminStudents = React.lazy(() => import("./pages/admin/AdminStudents"));
 const AdminCodes = React.lazy(() => import("./pages/admin/AdminCodes"));
 const AdminWaitlist = React.lazy(() => import("./pages/admin/AdminWaitlist"));
 const AdminBilling = React.lazy(() => import("./pages/admin/AdminBilling"));
+const AdminTestimonials = React.lazy(() => import("./pages/admin/AdminTestimonials"));
 const TopUp = React.lazy(() => import("./pages/TopUp"));
 
 const queryClient = new QueryClient({
@@ -232,6 +233,16 @@ const App = () => (
                       <AppLayout>
                         <AdminRoute>
                           <AdminWaitlist />
+                        </AdminRoute>
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/admin/testimonials"
+                    element={
+                      <AppLayout>
+                        <AdminRoute>
+                          <AdminTestimonials />
                         </AdminRoute>
                       </AppLayout>
                     }

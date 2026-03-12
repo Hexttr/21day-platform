@@ -7,6 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { WeekCard } from './WeekCard';
 import { LessonView } from './LessonView';
 import { PracticalMaterials } from './PracticalMaterials';
+import { TestimonialsSection } from './TestimonialsSection';
 import { 
   BookOpen, 
   Target, 
@@ -244,6 +245,11 @@ export function Dashboard() {
             </div>
           </section>
         )}
+
+        <TestimonialsSection
+          variant="dashboard"
+          className="mb-8 sm:mb-10"
+        />
 
         {/* ── Course Content ── */}
         <section className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle, Brain, Zap, Target, CalendarPlus } from 'lucide-react';
+import { TestimonialsSection } from './TestimonialsSection';
 import { WaitlistModal } from './WaitlistModal';
 
 export function LoginForm() {
@@ -55,11 +56,6 @@ export function LoginForm() {
     setError('');
     setSuccess('');
 
-    if (!invitationCode.trim()) {
-      setError('Введите пригласительный код');
-      return;
-    }
-
     setIsLoading(true);
 
     const { error } = await signUp(email, password, name, invitationCode);
@@ -73,7 +69,8 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex mesh-bg">
+    <div className="min-h-screen mesh-bg">
+      <div className="lg:flex lg:min-h-screen">
       {/* Left side - Decorative */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <div className="absolute inset-0 gradient-hero opacity-90" />
@@ -82,7 +79,7 @@ export function LoginForm() {
         <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute bottom-1/3 right-1/4 w-48 h-48 rounded-full bg-white/10 blur-2xl" />
         
-        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
+        <div className="relative z-10 flex flex-1 flex-col justify-between px-12 py-12 xl:px-20">
           <div className="max-w-md">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
@@ -131,6 +128,10 @@ export function LoginForm() {
               <CalendarPlus className="w-5 h-5 mr-2" />
               Записаться в следующий поток
             </Button>
+          </div>
+
+          <div className="max-w-2xl pt-10">
+            <TestimonialsSection variant="public" />
           </div>
         </div>
       </div>
@@ -244,7 +245,7 @@ export function LoginForm() {
                   <form onSubmit={handleSignUp} className="space-y-5">
                     <div className="space-y-2">
                       <Label htmlFor="invitation-code" className="text-sm font-medium">
-                        Пригласительный код *
+                        Пригласительный код
                       </Label>
                       <div className="relative">
                         <Input
@@ -257,7 +258,6 @@ export function LoginForm() {
                             setCodeValid(null);
                           }}
                           onBlur={handleCodeBlur}
-                          required
                           className={`h-12 rounded-xl border-border/50 focus:border-primary bg-secondary/30 uppercase ${
                             codeValid === true ? 'border-green-500 bg-green-50/10' : 
                             codeValid === false ? 'border-destructive bg-destructive/5' : ''
@@ -270,8 +270,8 @@ export function LoginForm() {
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">✓</span>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Код необходим для регистрации на платформе
+                      <p className="text-xs text-muted-foreground leading-5">
+                        Код необязателен. Без кода вы войдете как <span className="font-semibold text-foreground">Пользователь ИИ</span>, с кодом получите доступ к полному курсу как <span className="font-semibold text-foreground">student</span>.
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -356,6 +356,11 @@ export function LoginForm() {
             Создавая аккаунт, вы соглашаетесь с условиями использования
           </p>
         </div>
+      </div>
+      </div>
+
+      <div className="px-4 pb-8 sm:px-6 lg:hidden">
+        <TestimonialsSection variant="public" />
       </div>
     </div>
   );

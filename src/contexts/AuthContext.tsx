@@ -79,14 +79,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name: string, invitationCode: string) => {
-    const codeValidation = await validateInvitationCode(invitationCode);
-    if (!codeValidation.valid) {
-      return { error: codeValidation.error || 'Недействительный пригласительный код' };
+    const normalizedInvitationCode = invitationCode.trim().toUpperCase();
+
+    if (normalizedInvitationCode) {
+      const codeValidation = await validateInvitationCode(normalizedInvitationCode);
+      if (!codeValidation.valid) {
+        return { error: codeValidation.error || 'Недействительный пригласительный код' };
+      }
     }
+
     try {
       const res = await api<{ token: string; user: AppUser }>('/auth/signup', {
         method: 'POST',
-        body: { email, password, name, invitationCode: invitationCode.trim().toUpperCase() },
+        body: {
+          email,
+          password,
+          name,
+          invitationCode: normalizedInvitationCode || undefined,
+        },
       });
       setToken(res.token);
       setUser(res.user);

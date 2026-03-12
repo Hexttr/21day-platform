@@ -10,6 +10,7 @@ import {
 import { NavLink } from "react-router-dom";
 
 import { BalanceWidget } from "@/components/BalanceWidget";
+import { WaitlistModal } from "@/components/WaitlistModal";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -170,6 +171,7 @@ export default function AIToolsHome() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const isAIUser = user?.role === "ai_user";
+  const [waitlistOpen, setWaitlistOpen] = React.useState(false);
 
   const sortedTools = React.useMemo(
     () => sortAIToolsForRole(aiTools, user?.role),
@@ -401,7 +403,46 @@ export default function AIToolsHome() {
             })}
           </div>
         </section>
+
+        <section className="pb-8 md:pb-10">
+          <div className="relative overflow-hidden rounded-[32px] border border-primary/18 bg-[linear-gradient(135deg,#5b21b6_0%,#7c3aed_45%,#9333ea_100%)] px-5 py-6 text-white shadow-[0_28px_70px_rgba(91,33,182,0.24)] md:px-8 md:py-8">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.14),transparent_32%)]" />
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/12 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/92">
+                  Курс 21DAY
+                </div>
+                <h2 className="mt-4 text-2xl font-semibold leading-tight md:text-[2rem]">
+                  Хотите не просто пользоваться AI, а внедрить его в работу системно?
+                </h2>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-white/82 md:text-base">
+                  Запишитесь в следующий поток курса по ИИ за 21 день. Мы покажем, как уверенно работать с промптами, контентом, документами и ежедневными задачами без перегруза.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button
+                  size="lg"
+                  onClick={() => setWaitlistOpen(true)}
+                  className="rounded-2xl bg-white text-primary shadow-lg hover:bg-white/92"
+                >
+                  Записаться
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <div className="rounded-2xl border border-white/18 bg-white/10 px-4 py-3 text-sm text-white/84 backdrop-blur-sm">
+                  Заявка попадет в текущий лист ожидания, который уже виден админу.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
+
+      <WaitlistModal
+        open={waitlistOpen}
+        onOpenChange={setWaitlistOpen}
+        context="ai-hub"
+      />
     </div>
   );
 }

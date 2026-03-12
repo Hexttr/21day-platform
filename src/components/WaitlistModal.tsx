@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,15 +11,54 @@ import { toast } from 'sonner';
 interface WaitlistModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  context?: 'course' | 'ai-hub';
 }
 
-export function WaitlistModal({ open, onOpenChange }: WaitlistModalProps) {
+export function WaitlistModal({ open, onOpenChange, context = 'course' }: WaitlistModalProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [contact, setContact] = useState('');
   const [contactType, setContactType] = useState<'telegram' | 'phone'>('telegram');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const copy = context === 'ai-hub'
+    ? {
+        heroTitle: 'Перейдите от инструментов к системе',
+        heroSubtitle: '21DAY course',
+        heroText: 'Курс поможет не просто пользоваться AI, а встроить его в работу, контент и ежедневные процессы.',
+        formTitle: 'Записаться на следующий поток',
+        successText: 'Мы напишем вам, когда откроется следующий поток курса по ИИ за 21 день.',
+        footerText: 'Оставьте контакт, и мы сообщим, когда откроется набор.',
+        features: [
+          { icon: Brain, title: '21 день', desc: 'Понятная траектория обучения' },
+          { icon: MessageCircle, title: 'Практика', desc: 'Сценарии под реальные задачи' },
+          { icon: Users, title: 'Поддержка', desc: 'Среда и сопровождение' },
+          { icon: Calendar, title: 'Гибкий темп', desc: 'Можно совмещать с работой' },
+        ],
+      }
+    : {
+        heroTitle: 'Освойте ИИ за 21 день',
+        heroSubtitle: 'NeuroAcademy',
+        heroText: 'Практический курс для помогающих специалистов',
+        formTitle: 'Записаться в следующий поток',
+        successText: 'Мы свяжемся с вами, когда откроется запись на следующий поток курса.',
+        footerText: 'Мы свяжемся с вами, когда откроется запись на следующий поток',
+        features: [
+          { icon: Brain, title: '21 урок', desc: 'Пошаговая программа' },
+          { icon: MessageCircle, title: 'AI-тьютор', desc: 'Персональная поддержка' },
+          { icon: Users, title: 'Сообщество', desc: 'Единомышленники' },
+          { icon: Calendar, title: 'Гибкий формат', desc: 'Учитесь в своём темпе' },
+        ],
+      };
+
+  const resetState = () => {
+    setFirstName('');
+    setLastName('');
+    setContact('');
+    setContactType('telegram');
+    setIsSuccess(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,20 +88,17 @@ export function WaitlistModal({ open, onOpenChange }: WaitlistModalProps) {
     }
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-    // Reset form after closing
-    setTimeout(() => {
-      setFirstName('');
-      setLastName('');
-      setContact('');
-      setContactType('telegram');
-      setIsSuccess(false);
-    }, 300);
+  const handleOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen);
+    if (!nextOpen) {
+      setTimeout(() => {
+        resetState();
+      }, 300);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         {isSuccess ? (
           <div className="p-8 text-center">
@@ -71,9 +107,9 @@ export function WaitlistModal({ open, onOpenChange }: WaitlistModalProps) {
             </div>
             <h2 className="font-serif text-2xl font-semibold mb-3">Вы в списке!</h2>
             <p className="text-muted-foreground mb-6">
-              Мы свяжемся с вами, когда откроется запись на следующий поток курса.
+              {copy.successText}
             </p>
-            <Button onClick={handleClose} className="gradient-hero">
+            <Button onClick={() => handleOpenChange(false)} className="gradient-hero">
               Закрыть
             </Button>
           </div>
@@ -85,15 +121,18 @@ export function WaitlistModal({ open, onOpenChange }: WaitlistModalProps) {
                 <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
                   <Sparkles className="w-5 h-5" />
                 </div>
-                <span className="font-serif text-xl font-semibold">NeuroAcademy</span>
+                <span className="font-serif text-xl font-semibold">{copy.heroSubtitle}</span>
               </div>
               <DialogHeader>
                 <DialogTitle className="font-serif text-3xl font-semibold text-white leading-tight">
-                  Освойте ИИ за 21 день
+                  {copy.heroTitle}
                 </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Форма заявки в лист ожидания следующего потока курса.
+                </DialogDescription>
               </DialogHeader>
               <p className="mt-3 text-white/90 text-lg">
-                Практический курс для помогающих специалистов
+                {copy.heroText}
               </p>
             </div>
 
@@ -101,12 +140,7 @@ export function WaitlistModal({ open, onOpenChange }: WaitlistModalProps) {
             <div className="p-8">
               {/* Features grid */}
               <div className="grid grid-cols-2 gap-4 mb-8">
-                {[
-                  { icon: Brain, title: '21 урок', desc: 'Пошаговая программа' },
-                  { icon: MessageCircle, title: 'AI-тьютор', desc: 'Персональная поддержка' },
-                  { icon: Users, title: 'Сообщество', desc: 'Единомышленники' },
-                  { icon: Calendar, title: 'Гибкий формат', desc: 'Учитесь в своём темпе' },
-                ].map((feature, index) => (
+                {copy.features.map((feature, index) => (
                   <div key={index} className="p-4 rounded-xl bg-secondary/50 border border-border/50">
                     <feature.icon className="w-6 h-6 text-primary mb-2" />
                     <h4 className="font-medium text-sm">{feature.title}</h4>
@@ -140,7 +174,7 @@ export function WaitlistModal({ open, onOpenChange }: WaitlistModalProps) {
               {/* Form */}
               <div className="border-t border-border/50 pt-6">
                 <h3 className="font-serif text-lg font-semibold mb-4">
-                  Записаться в следующий поток
+                  {copy.formTitle}
                 </h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -216,7 +250,7 @@ export function WaitlistModal({ open, onOpenChange }: WaitlistModalProps) {
                   </Button>
 
                   <p className="text-xs text-center text-muted-foreground">
-                    Мы свяжемся с вами, когда откроется запись на следующий поток
+                    {copy.footerText}
                   </p>
                 </form>
               </div>

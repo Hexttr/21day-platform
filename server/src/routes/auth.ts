@@ -26,27 +26,37 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Sign up
   app.post<{
-    Body: { email: string; password: string; name: string; invitationCode: string };
+    Body: { email: string; password: string; name: string; invitationCode?: string };
   }>('/auth/signup', async (req, reply) => {
     const { email, password, name, invitationCode } = req.body || {};
-    if (!email?.trim() || !password || !name?.trim() || !invitationCode?.trim()) {
+    if (!email?.trim() || !password || !name?.trim()) {
       return reply.status(400).send({ error: 'Заполните все поля' });
     }
     if (password.length < 6) {
       return reply.status(400).send({ error: 'Пароль минимум 6 символов' });
     }
-    const normalized = invitationCode.trim().toUpperCase();
-    const [codeRow] = await db
-      .select()
-      .from(invitationCodes)
-      .where(and(eq(invitationCodes.code, normalized), eq(invitationCodes.isActive, true)));
-    if (!codeRow) {
-      return reply.status(400).send({ error: 'Недействительный пригласительный код' });
-    }
     const [existing] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase()));
     if (existing) {
       return reply.status(400).send({ error: 'Пользователь с таким email уже существует' });
     }
+
+    let codeRow: typeof invitationCodes.$inferSelect | undefined;
+    let role: 'student' | 'ai_user' = 'ai_user';
+
+    if (invitationCode?.trim()) {
+      const normalized = invitationCode.trim().toUpperCase();
+      [codeRow] = await db
+        .select()
+        .from(invitationCodes)
+        .where(and(eq(invitationCodes.code, normalized), eq(invitationCodes.isActive, true)));
+
+      if (!codeRow) {
+        return reply.status(400).send({ error: 'Недействительный пригласительный код' });
+      }
+
+      role = 'student';
+    }
+
     const passwordHash = await hashPassword(password);
     const [newUser] = await db
       .insert(users)
@@ -54,19 +64,19 @@ export async function authRoutes(app: FastifyInstance) {
         email: email.trim().toLowerCase(),
         passwordHash,
         name: name.trim(),
-        invitationCodeId: codeRow.id,
+        invitationCodeId: codeRow?.id ?? null,
       })
       .returning();
     if (!newUser) {
       return reply.status(500).send({ error: 'Ошибка создания пользователя' });
     }
-    await db.insert(userRoles).values({ userId: newUser.id, role: 'student' });
+    await db.insert(userRoles).values({ userId: newUser.id, role });
     const token = signToken({
       userId: newUser.id,
       email: newUser.email,
-      role: 'student',
+      role,
     });
-    return reply.send({ token, user: { id: newUser.id, email: newUser.email, name: newUser.name, role: 'student' } });
+    return reply.send({ token, user: { id: newUser.id, email: newUser.email, name: newUser.name, role } });
   });
 
   // Sign in

@@ -95,6 +95,18 @@ export const waitlist = pgTable('waitlist', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const testimonials = pgTable('testimonials', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  roleOrSubtitle: text('role_or_subtitle').notNull().default(''),
+  text: text('text').notNull(),
+  avatarVariant: text('avatar_variant', { enum: ['male', 'female'] }).notNull().default('male'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isPublished: boolean('is_published').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ── Billing & AI models ──
 
 export const aiProviders = pgTable('ai_providers', {
@@ -214,6 +226,7 @@ export type LessonContent = typeof lessonContent.$inferSelect;
 export type StudentProgress = typeof studentProgress.$inferSelect;
 export type PracticalMaterial = typeof practicalMaterials.$inferSelect;
 export type WaitlistEntry = typeof waitlist.$inferSelect;
+export type Testimonial = typeof testimonials.$inferSelect;
 export type AIProvider = typeof aiProviders.$inferSelect;
 export type ProviderSecret = typeof providerSecrets.$inferSelect;
 export type AIModel = typeof aiModels.$inferSelect;
