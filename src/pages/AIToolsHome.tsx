@@ -10,7 +10,6 @@ import {
 import { NavLink } from "react-router-dom";
 
 import { BalanceWidget } from "@/components/BalanceWidget";
-import { WaitlistModal } from "@/components/WaitlistModal";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -171,7 +170,6 @@ export default function AIToolsHome() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const isAIUser = user?.role === "ai_user";
-  const [waitlistOpen, setWaitlistOpen] = React.useState(false);
 
   const sortedTools = React.useMemo(
     () => sortAIToolsForRole(aiTools, user?.role),
@@ -422,12 +420,18 @@ export default function AIToolsHome() {
 
               <div className="flex w-full max-w-sm flex-col gap-3">
                 <Button
+                  asChild
                   size="lg"
-                  onClick={() => setWaitlistOpen(true)}
                   className="h-12 w-full rounded-2xl bg-white px-8 text-primary shadow-lg hover:bg-white/92"
                 >
-                  Записаться
-                  <ArrowRight className="h-4 w-4" />
+                  <a
+                    href="https://promo.21day.club/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Записаться
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
                 </Button>
                 <div className="rounded-2xl border border-white/18 bg-white/10 px-4 py-3 text-sm text-white/84 backdrop-blur-sm">
                   Мы с вами свяжемся и сообщим все подробности курса!
@@ -437,12 +441,6 @@ export default function AIToolsHome() {
           </div>
         </section>
       </main>
-
-      <WaitlistModal
-        open={waitlistOpen}
-        onOpenChange={setWaitlistOpen}
-        context="ai-hub"
-      />
     </div>
   );
 }
