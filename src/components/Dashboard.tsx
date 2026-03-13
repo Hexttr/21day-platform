@@ -3,6 +3,7 @@ import { courseData, getLessonById } from '@/data/courseData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProgress } from '@/contexts/ProgressContext';
 import { usePublishedLessons } from '@/hooks/usePublishedLessons';
+import { useCourseViewMode } from '@/hooks/useCourseViewMode';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { WeekCard } from './WeekCard';
 import { LessonView } from './LessonView';
@@ -16,11 +17,11 @@ import {
   Play,
   Sparkles,
   LogOut,
-  RefreshCw
+  RefreshCw,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
-import { usePublishedLessons as usePublishedLessonsRefresh } from '@/hooks/usePublishedLessons';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Dashboard() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
   const {
     getCompletedCount,
@@ -42,14 +43,17 @@ export function Dashboard() {
     isLoading: isProgressLoading,
     refreshProgress,
   } = useProgress();
-  const {
-    isLessonPublished,
-    publishedLessonIds,
-    loading: isLessonsLoading,
-    refreshPublishedLessons,
-  } = usePublishedLessons();
+  const { viewMode, setViewMode } = useCourseViewMode();
   const { impersonatedUser, isImpersonating, stopImpersonation } = useImpersonation();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const effectiveCourseViewMode = isImpersonating ? 'student' : viewMode;
+  const isFullCourseMode = isAdmin && effectiveCourseViewMode === 'all';
+  const {
+    isLessonPublished,
+    isLessonVisible,
+    loading: isLessonsLoading,
+    refreshPublishedLessons,
+  } = usePublishedLessons(effectiveCourseViewMode);
 
   const completedCount = isProgressLoading ? 0 : getCompletedCount();
   const progressPercentage = isProgressLoading ? 0 : getProgressPercentage();
@@ -57,15 +61,20 @@ export function Dashboard() {
   const isDataLoading = isLessonsLoading || isProgressLoading;
 
   const allLessons = courseData.flatMap(week => week.lessons);
-  const getPreviousPublishedLessonId = (lessonId: number) => {
-    const lessonIndex = publishedLessonIds.indexOf(lessonId);
-    if (lessonIndex <= 0) {
-      return null;
-    }
-    return publishedLessonIds[lessonIndex - 1] ?? null;
-  };
 
   const canAccessLesson = (lessonId: number) => {
+    if (isFullCourseMode) {
+      return true;
+    }
+
+    if (!isLessonVisible(lessonId)) {
+      return false;
+    }
+
+    if (isLessonCompleted(lessonId)) {
+      return true;
+    }
+
     if (!isLessonPublished(lessonId)) {
       return false;
     }
@@ -74,16 +83,19 @@ export function Dashboard() {
       return true;
     }
 
-    const previousLessonId = getPreviousPublishedLessonId(lessonId);
-    if (previousLessonId === null) {
+    if (lessonId === 1) {
       return true;
     }
 
-    return isQuizCompleted(previousLessonId);
+    return isQuizCompleted(lessonId - 1);
   };
 
   const getLessonLockReason = (lessonId: number) => {
-    if (!isLessonPublished(lessonId)) {
+    if (isFullCourseMode) {
+      return null;
+    }
+
+    if (!isLessonVisible(lessonId) || !isLessonPublished(lessonId)) {
       return 'unpublished';
     }
 
@@ -129,6 +141,7 @@ export function Dashboard() {
             isLessonPublished={isLessonPublished}
             canAccessLesson={canAccessLesson}
             getLessonLockReason={getLessonLockReason}
+            courseViewMode={effectiveCourseViewMode}
           />
         </div>
       </div>
@@ -189,6 +202,49 @@ export function Dashboard() {
       </div>
 
       <main className="container mx-auto px-4 py-6 sm:py-8 max-w-4xl min-[1920px]:max-w-[80%]">
+        {isAdmin && !isImpersonating && (
+          <section className="mb-6 animate-fade-in-up">
+            <div className="rounded-2xl border border-border/60 bg-card/95 p-4 shadow-soft">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                    <Shield className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-medium text-foreground">Режим просмотра курса</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Можно смотреть курс по своему прогрессу или открыть все уроки сразу как администратор.
+                    </p>
+                  </div>
+                </div>
+                <div className="inline-flex rounded-xl border border-border/60 bg-background/80 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('student')}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      effectiveCourseViewMode === 'student'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Как ученик
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('all')}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      effectiveCourseViewMode === 'all'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Весь курс
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ════════════════════════════════════════
             HERO — inspired by the 21day landing

@@ -8,10 +8,12 @@ import { Sparkles, Send, Loader2, CheckCircle2, X, Bot, Target } from 'lucide-re
 import { api } from '@/api/client';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { CourseViewMode } from '@/hooks/useCourseViewMode';
 
 interface AIQuizProps {
   lesson: Lesson;
   onClose: () => void;
+  courseViewMode?: CourseViewMode;
 }
 
 interface Message {
@@ -42,7 +44,7 @@ function cleanAIResponse(response: string): string {
 // Limit server history per criterion context (not visual history)
 const MAX_CRITERION_HISTORY = 4;
 
-export function AIQuiz({ lesson, onClose }: AIQuizProps) {
+export function AIQuiz({ lesson, onClose, courseViewMode = 'student' }: AIQuizProps) {
   const { markQuizComplete } = useProgress();
   const isMobile = useIsMobile();
   const [messages, setMessages] = useState<Message[]>([]); // Visual history (what user sees)
@@ -81,7 +83,8 @@ export function AIQuiz({ lesson, onClose }: AIQuizProps) {
       // Load custom AI prompt from lesson_content
       let prompt: string | null = null;
       try {
-        const lessonData = await api<{ aiPrompt: string | null }>(`/lessons/${lesson.id}`);
+        const query = courseViewMode === 'all' ? '?viewMode=all' : '';
+        const lessonData = await api<{ aiPrompt: string | null }>(`/lessons/${lesson.id}${query}`);
         prompt = lessonData?.aiPrompt || null;
       } catch {
         // Lesson content may not exist
@@ -240,7 +243,7 @@ export function AIQuiz({ lesson, onClose }: AIQuizProps) {
       if (allPassed) {
         setIsComplete(true);
         try {
-          await markQuizComplete(lesson.id);
+          await markQuizComplete(lesson.id, courseViewMode);
           toast.success('Поздравляем! Все критерии пройдены! 🎉');
         } catch (saveError) {
           console.error('Failed to save quiz completion:', saveError);

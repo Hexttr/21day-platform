@@ -13,7 +13,7 @@ interface LessonProgress {
 interface ProgressContextType {
   progress: LessonProgress[];
   isLoading: boolean;
-  markQuizComplete: (lessonId: number) => Promise<void>;
+  markQuizComplete: (lessonId: number, viewMode?: 'student' | 'all') => Promise<void>;
   isLessonCompleted: (lessonId: number) => boolean;
   isQuizCompleted: (lessonId: number) => boolean;
   hasLessonProgress: (lessonId: number) => boolean;
@@ -108,13 +108,14 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     }
   }, [effectiveUserId]);
 
-  const markQuizComplete = async (lessonId: number) => {
+  const markQuizComplete = async (lessonId: number, viewMode: 'student' | 'all' = 'student') => {
     if (!user) {
       console.error('markQuizComplete: No user logged in');
       return;
     }
     try {
-      await api('/progress', { method: 'PUT', body: { lessonId, quizCompleted: true, completed: true } });
+      const query = viewMode === 'all' ? '?viewMode=all' : '';
+      await api(`/progress${query}`, { method: 'PUT', body: { lessonId, quizCompleted: true, completed: true } });
       await fetchProgress(user.id, true);
     } catch (error) {
       console.error('markQuizComplete: Failed to save progress', error);

@@ -1,11 +1,18 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { api } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { CourseViewMode } from './useCourseViewMode';
 
-export function usePublishedLessons() {
+interface LessonVisibilityRow {
+  lessonId: number;
+  isPublished?: boolean | null;
+}
+
+export function usePublishedLessons(viewMode: CourseViewMode = 'student') {
   const { isSessionReady } = useAuth();
   
   // ALL useState hooks FIRST (critical for HMR stability)
+  const [visibleLessons, setVisibleLessons] = useState<Set<number>>(new Set());
   const [publishedLessons, setPublishedLessons] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   
@@ -33,7 +40,8 @@ export function usePublishedLessons() {
     console.log('[PublishedLessons] Starting fetch, force:', force, 'timestamp:', Date.now());
     
     try {
-      const data = await api<Array<{ lessonId: number }>>('/lessons');
+      const query = viewMode === 'all' ? '?viewMode=all' : '';
+      const data = await api<LessonVisibilityRow[]>(`/lessons${query}`);
 
       if (!mountedRef.current) {
         console.log('[PublishedLessons] Component unmounted, ignoring response');
@@ -42,10 +50,12 @@ export function usePublishedLessons() {
 
       console.log('[PublishedLessons] Loaded:', data?.length || 0, 'published lessons');
       
-      const newSet = new Set((data || []).map(item => item.lessonId));
-      console.log('[PublishedLessons] Setting lessons:', Array.from(newSet));
+      const nextVisibleLessons = new Set((data || []).map(item => item.lessonId));
+      const nextPublishedLessons = new Set((data || []).filter(item => item.isPublished).map(item => item.lessonId));
+      console.log('[PublishedLessons] Setting lessons:', Array.from(nextVisibleLessons));
       
-      setPublishedLessons(newSet);
+      setVisibleLessons(nextVisibleLessons);
+      setPublishedLessons(nextPublishedLessons);
       hasFetchedRef.current = true;
       setLoading(false);
       isFetchingRef.current = false;
@@ -56,7 +66,7 @@ export function usePublishedLessons() {
         isFetchingRef.current = false;
       }
     }
-  }, []); // NO dependencies - stable function reference
+  }, [viewMode]);
 
   // Load only when session is ready - ALWAYS force fetch on mount to bypass cache
   useEffect(() => {
@@ -74,7 +84,7 @@ export function usePublishedLessons() {
     return () => {
       mountedRef.current = false;
     };
-  }, [isSessionReady, loadPublishedLessons]);
+  }, [isSessionReady, loadPublishedLessons, viewMode]);
 
   // Memoized check function - depends on publishedLessons state
   const isLessonPublished = useCallback((lessonId: number): boolean => {
@@ -85,6 +95,10 @@ export function usePublishedLessons() {
     }
     return result;
   }, [publishedLessons]);
+
+  const isLessonVisible = useCallback((lessonId: number): boolean => {
+    return visibleLessons.has(lessonId);
+  }, [visibleLessons]);
 
   const refreshPublishedLessons = useCallback(async () => {
     console.log('[PublishedLessons] Manual refresh requested');
@@ -98,11 +112,19 @@ export function usePublishedLessons() {
     [publishedLessons]
   );
 
+  const visibleLessonIds = useMemo(
+    () => Array.from(visibleLessons).sort((a, b) => a - b),
+    [visibleLessons]
+  );
+
   return { 
+    isLessonVisible,
     isLessonPublished, 
     publishedLessonIds,
+    visibleLessonIds,
     loading, 
     refreshPublishedLessons, 
-    publishedCount: publishedLessons.size 
+    publishedCount: publishedLessons.size,
+    visibleCount: visibleLessons.size,
   };
 }

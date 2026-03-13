@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
+import { useCourseViewMode } from '@/hooks/useCourseViewMode';
 import { 
   Save, 
   Loader2, 
@@ -21,6 +22,7 @@ import {
   Eye,
   EyeOff,
   ImagePlus,
+  Shield,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -37,6 +39,7 @@ interface LessonContent {
 }
 
 export default function AdminLessons() {
+  const { viewMode, setViewMode } = useCourseViewMode();
   const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
   const [lessonContent, setLessonContent] = useState<LessonContent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,7 +59,7 @@ export default function AdminLessons() {
   const loadLessonContent = async (lessonId: number) => {
     setIsLoading(true);
     try {
-      const data = await api<{ id: string; lessonId: number; customDescription: string | null; videoUrls: string[]; videoPreviewUrls?: string[]; pdfUrls: string[]; additionalMaterials: string | null; isPublished: boolean; aiPrompt: string | null }>(`/lessons/${lessonId}`);
+      const data = await api<{ id: string; lessonId: number; customDescription: string | null; videoUrls: string[]; videoPreviewUrls?: string[]; pdfUrls: string[]; additionalMaterials: string | null; isPublished: boolean; aiPrompt: string | null }>(`/lessons/${lessonId}?viewMode=all`);
       setLessonContent({
         id: data.id,
         lesson_id: data.lessonId,
@@ -208,6 +211,45 @@ export default function AdminLessons() {
       description="Редактирование контента, видео и публикация уроков"
       icon={BookOpen}
     >
+      <div className="mb-5 rounded-2xl border border-border/60 bg-card/95 p-4 shadow-soft">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+              <Shield className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-medium text-foreground">Режим просмотра курса для администратора</h2>
+              <p className="text-sm text-muted-foreground">
+                Настройка влияет на страницу курса: можно видеть его как ученик по своему прогрессу или открыть все уроки сразу.
+              </p>
+            </div>
+          </div>
+          <div className="inline-flex rounded-xl border border-border/60 bg-background/80 p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode('student')}
+              className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                viewMode === 'student'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Как ученик
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('all')}
+              className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                viewMode === 'all'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Весь курс
+            </button>
+          </div>
+        </div>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Lessons List */}
         <div className="lg:col-span-1">

@@ -23,6 +23,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { AIQuiz } from './AIQuiz';
+import { CourseViewMode } from '@/hooks/useCourseViewMode';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -31,6 +32,7 @@ interface LessonViewProps {
   isLessonPublished: (lessonId: number) => boolean;
   canAccessLesson: (lessonId: number) => boolean;
   getLessonLockReason: (lessonId: number) => 'unpublished' | 'previous_quiz_incomplete' | null;
+  courseViewMode?: CourseViewMode;
 }
 
 interface LessonContent {
@@ -48,6 +50,7 @@ export function LessonView({
   isLessonPublished,
   canAccessLesson,
   getLessonLockReason,
+  courseViewMode = 'student',
 }: LessonViewProps) {
   const { isLessonCompleted, isQuizCompleted } = useProgress();
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(true);
@@ -105,14 +108,15 @@ export function LessonView({
   const lockReason = getLessonLockReason(lesson.id);
 
   useEffect(() => {
-    if (isPublished && isAccessible) {
+    if (isAccessible) {
       loadLessonContent();
     }
-  }, [lesson.id, isPublished, isAccessible]);
+  }, [lesson.id, isAccessible, courseViewMode]);
 
   const loadLessonContent = async () => {
     try {
-      const data = await api<{ customDescription: string | null; videoUrls: string[]; videoPreviewUrls?: string[]; pdfUrls: string[]; additionalMaterials: string | null }>(`/lessons/${lesson.id}`);
+      const query = courseViewMode === 'all' ? '?viewMode=all' : '';
+      const data = await api<{ customDescription: string | null; videoUrls: string[]; videoPreviewUrls?: string[]; pdfUrls: string[]; additionalMaterials: string | null }>(`/lessons/${lesson.id}${query}`);
       setLessonContent({
         custom_description: data.customDescription,
         video_urls: data.videoUrls || [],
@@ -139,7 +143,7 @@ export function LessonView({
     return null;
   };
 
-  if (!isPublished || !isAccessible) {
+  if (!isAccessible) {
     const lockMessage = lockReason === 'previous_quiz_incomplete'
       ? 'Сначала завершите AI-тест по предыдущему уроку, и следующий урок откроется автоматически.'
       : 'Этот урок ещё не опубликован. Пожалуйста, вернитесь позже или выберите другой урок.';
@@ -467,7 +471,8 @@ export function LessonView({
         <div className="mb-6">
           <AIQuiz 
             lesson={lesson} 
-            onClose={() => setShowQuiz(false)} 
+            onClose={() => setShowQuiz(false)}
+            courseViewMode={courseViewMode}
           />
         </div>
       ) : (

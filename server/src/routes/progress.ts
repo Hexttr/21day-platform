@@ -26,6 +26,7 @@ export async function progressRoutes(app: FastifyInstance) {
 
   // Upsert progress for a lesson
   app.put<{
+    Querystring: { viewMode?: string };
     Body: { lessonId: number; completed?: boolean; quizCompleted?: boolean };
   }>('/progress', async (req, reply) => {
     const payload = getAuthFromRequest(req);
@@ -44,14 +45,16 @@ export async function progressRoutes(app: FastifyInstance) {
       .from(studentProgress)
       .where(and(eq(studentProgress.userId, payload.userId), eq(studentProgress.lessonId, lessonId)));
 
-    const accessState = await getLessonAccessState(payload.userId, lessonId, payload.role);
+    const accessState = await getLessonAccessState(payload.userId, lessonId, {
+      bypassAllRestrictions: payload.role === 'admin' && req.query.viewMode === 'all',
+    });
     if (!accessState.lessonExists) {
       return reply.status(404).send({ error: 'Урок не найден' });
     }
-    if (!accessState.isPublished && payload.role !== 'admin') {
+    if (!accessState.isPublished && !accessState.canAccess) {
       return reply.status(404).send({ error: 'Урок не найден' });
     }
-    if (!accessState.canAccess && payload.role !== 'admin') {
+    if (!accessState.canAccess) {
       return reply.status(423).send({
         error: 'Нельзя сохранить прогресс: сначала завершите AI-тест по предыдущему уроку',
         previousLessonId: accessState.previousLessonId,

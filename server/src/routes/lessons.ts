@@ -1,13 +1,13 @@
 import { FastifyInstance } from 'fastify';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, and } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { lessonContent } from '../db/schema.js';
+import { lessonContent, studentProgress } from '../db/schema.js';
 import { getAuthFromRequest } from '../lib/auth.js';
 import { getLessonAccessState } from '../lib/lesson-access.js';
 
 export async function lessonRoutes(app: FastifyInstance) {
   // Get published lessons (authenticated, ai_user — нет доступа)
-  app.get('/lessons', async (req, reply) => {
+  app.get<{ Querystring: { viewMode?: string } }>('/lessons', async (req, reply) => {
     const payload = getAuthFromRequest(req);
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
@@ -15,16 +15,33 @@ export async function lessonRoutes(app: FastifyInstance) {
     if (payload.role === 'ai_user') {
       return reply.status(403).send({ error: 'Доступ к урокам недоступен для этого типа аккаунта' });
     }
-    const rows = await db
-      .select()
-      .from(lessonContent)
-      .where(eq(lessonContent.isPublished, true))
-      .orderBy(asc(lessonContent.lessonId));
-    return reply.send(rows);
+
+    const viewMode = req.query.viewMode === 'all' ? 'all' : 'student';
+    const bypassAllRestrictions = payload.role === 'admin' && viewMode === 'all';
+
+    const rows = await db.select().from(lessonContent).orderBy(asc(lessonContent.lessonId));
+    if (bypassAllRestrictions) {
+      return reply.send(rows);
+    }
+
+    const completedRows = await db
+      .select({ lessonId: studentProgress.lessonId })
+      .from(studentProgress)
+      .where(
+        and(
+          eq(studentProgress.userId, payload.userId),
+          eq(studentProgress.quizCompleted, true)
+        )
+      );
+
+    const completedLessonIds = new Set(completedRows.map((row) => row.lessonId));
+    const visibleRows = rows.filter((row) => row.isPublished || completedLessonIds.has(row.lessonId));
+
+    return reply.send(visibleRows);
   });
 
   // Get single lesson by lesson_id
-  app.get<{ Params: { lessonId: string } }>('/lessons/:lessonId', async (req, reply) => {
+  app.get<{ Params: { lessonId: string }; Querystring: { viewMode?: string } }>('/lessons/:lessonId', async (req, reply) => {
     const payload = getAuthFromRequest(req);
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
@@ -37,16 +54,19 @@ export async function lessonRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Некорректный ID урока' });
     }
 
-    const accessState = await getLessonAccessState(payload.userId, lessonId, payload.role);
+    const viewMode = req.query.viewMode === 'all' ? 'all' : 'student';
+    const accessState = await getLessonAccessState(payload.userId, lessonId, {
+      bypassAllRestrictions: payload.role === 'admin' && viewMode === 'all',
+    });
     if (!accessState.lessonExists) {
       return reply.status(404).send({ error: 'Урок не найден' });
     }
 
-    if (!accessState.isPublished && payload.role !== 'admin') {
+    if (!accessState.isPublished && !accessState.canAccess) {
       return reply.status(404).send({ error: 'Урок не найден' });
     }
 
-    if (!accessState.canAccess && payload.role !== 'admin') {
+    if (!accessState.canAccess) {
       return reply.status(423).send({
         error: 'Сначала завершите AI-тест по предыдущему уроку',
         previousLessonId: accessState.previousLessonId,

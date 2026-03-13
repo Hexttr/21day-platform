@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { lessonContent, studentProgress } from '../db/schema.js';
 
@@ -12,7 +12,15 @@ export interface LessonAccessState {
   previousLessonId: number | null;
 }
 
-export async function getLessonAccessState(userId: string, lessonId: number, role?: string): Promise<LessonAccessState> {
+interface LessonAccessOptions {
+  bypassAllRestrictions?: boolean;
+}
+
+export async function getLessonAccessState(
+  userId: string,
+  lessonId: number,
+  options: LessonAccessOptions = {}
+): Promise<LessonAccessState> {
   const [lesson] = await db
     .select({
       lessonId: lessonContent.lessonId,
@@ -31,7 +39,7 @@ export async function getLessonAccessState(userId: string, lessonId: number, rol
     };
   }
 
-  if (role === 'admin') {
+  if (options.bypassAllRestrictions) {
     return {
       canAccess: true,
       reason: 'ok',
@@ -41,76 +49,50 @@ export async function getLessonAccessState(userId: string, lessonId: number, rol
     };
   }
 
-  if (!lesson.isPublished) {
-    return {
-      canAccess: false,
-      reason: 'unpublished',
-      lessonExists: true,
-      isPublished: false,
-      previousLessonId: null,
-    };
-  }
-
-  const publishedLessons = await db
-    .select({ lessonId: lessonContent.lessonId })
-    .from(lessonContent)
-    .where(eq(lessonContent.isPublished, true))
-    .orderBy(asc(lessonContent.lessonId));
-
-  const publishedLessonIds = publishedLessons.map((item) => item.lessonId);
-  const lessonIndex = publishedLessonIds.indexOf(lessonId);
-
-  if (lessonIndex === -1) {
-    return {
-      canAccess: false,
-      reason: 'unpublished',
-      lessonExists: true,
-      isPublished: false,
-      previousLessonId: null,
-    };
-  }
-
-  if (lessonIndex === 0) {
-    return {
-      canAccess: true,
-      reason: 'ok',
-      lessonExists: true,
-      isPublished: true,
-      previousLessonId: null,
-    };
-  }
-
-  const previousLessonId = publishedLessonIds[lessonIndex - 1] ?? null;
-  if (!previousLessonId) {
-    return {
-      canAccess: true,
-      reason: 'ok',
-      lessonExists: true,
-      isPublished: true,
-      previousLessonId: null,
-    };
-  }
-
+  const previousLessonId = lessonId > 1 ? lessonId - 1 : null;
+  const progressLessonIds = previousLessonId ? [previousLessonId, lessonId] : [lessonId];
   const progressRows = await db
     .select({
       lessonId: studentProgress.lessonId,
       quizCompleted: studentProgress.quizCompleted,
+      completed: studentProgress.completed,
     })
     .from(studentProgress)
     .where(
       and(
         eq(studentProgress.userId, userId),
-        inArray(studentProgress.lessonId, [previousLessonId, lessonId])
+        inArray(studentProgress.lessonId, progressLessonIds)
       )
     );
 
   const currentLessonProgress = progressRows.find((row) => row.lessonId === lessonId);
-  if (currentLessonProgress) {
+
+  if (!lesson.isPublished && !currentLessonProgress?.quizCompleted) {
+    return {
+      canAccess: false,
+      reason: 'unpublished',
+      lessonExists: true,
+      isPublished: false,
+      previousLessonId,
+    };
+  }
+
+  if (lessonId === 1) {
     return {
       canAccess: true,
       reason: 'ok',
       lessonExists: true,
-      isPublished: true,
+      isPublished: Boolean(lesson.isPublished),
+      previousLessonId: null,
+    };
+  }
+
+  if (lesson.isPublished && currentLessonProgress) {
+    return {
+      canAccess: true,
+      reason: 'ok',
+      lessonExists: true,
+      isPublished: Boolean(lesson.isPublished),
       previousLessonId,
     };
   }
@@ -121,7 +103,7 @@ export async function getLessonAccessState(userId: string, lessonId: number, rol
       canAccess: true,
       reason: 'ok',
       lessonExists: true,
-      isPublished: true,
+      isPublished: Boolean(lesson.isPublished),
       previousLessonId,
     };
   }
@@ -130,7 +112,7 @@ export async function getLessonAccessState(userId: string, lessonId: number, rol
     canAccess: false,
     reason: 'previous_quiz_incomplete',
     lessonExists: true,
-    isPublished: true,
+    isPublished: Boolean(lesson.isPublished),
     previousLessonId,
   };
 }

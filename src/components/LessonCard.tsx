@@ -27,7 +27,7 @@ export function LessonCard({
   const completed = !isProgressLoading && isLessonCompleted(lesson.id);
   const quizDone = !isProgressLoading && isQuizCompleted(lesson.id);
   // Don't show as locked while data is loading
-  const isLocked = !isDataLoading && (!isPublished || !isAccessible);
+  const isLocked = !isDataLoading && !isAccessible;
   const lockLabel = lockReason === 'previous_quiz_incomplete' ? 'Сначала предыдущий урок' : 'Скоро';
 
   return (
