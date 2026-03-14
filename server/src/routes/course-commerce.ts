@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { courses, payments } from '../db/schema.js';
 import { getAuthFromRequest } from '../lib/auth.js';
-import { generatePaymentUrl } from '../lib/robokassa.js';
+import { generatePaymentUrl, isRobokassaConfigured } from '../lib/robokassa.js';
 import {
   createCourseOrder,
   getCourseByCode,
@@ -61,6 +61,10 @@ export async function courseCommerceRoutes(app: FastifyInstance) {
     const payload = getAuthFromRequest(req);
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
+    }
+
+    if (!isRobokassaConfigured()) {
+      return reply.status(503).send({ error: 'Оплата временно недоступна: Robokassa не настроена на сервере' });
     }
 
     const courseCode = req.body?.courseCode?.trim();

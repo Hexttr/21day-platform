@@ -4,7 +4,7 @@ import { db } from '../db/index.js';
 import { payments, balanceTransactions, aiUsageLog, userBalances, aiModels, aiProviders, courseOrders, courses } from '../db/schema.js';
 import { getAuthFromRequest } from '../lib/auth.js';
 import { getBalance, ensureBalanceRow, creditBalance, getSetting } from '../lib/billing.js';
-import { generatePaymentUrl, verifyResultSignature, verifySuccessSignature } from '../lib/robokassa.js';
+import { generatePaymentUrl, verifyResultSignature, verifySuccessSignature, isRobokassaConfigured } from '../lib/robokassa.js';
 import { grantCourseAccess } from '../lib/course-access.js';
 import { grantCoursePurchaseReferralBonusIfEligible } from '../lib/referrals.js';
 
@@ -131,6 +131,10 @@ export async function billingRoutes(app: FastifyInstance) {
   app.post<{ Body: { amount: number } }>('/payments/create', async (req, reply) => {
     const payload = getAuthFromRequest(req);
     if (!payload) return reply.status(401).send({ error: 'Не авторизован' });
+
+    if (!isRobokassaConfigured()) {
+      return reply.status(503).send({ error: 'Оплата временно недоступна: Robokassa не настроена на сервере' });
+    }
 
     const { amount } = req.body || {};
     const minAmount = parseFloat(await getSetting('min_topup_amount') || '100');

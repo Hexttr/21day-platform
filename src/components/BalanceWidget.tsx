@@ -9,7 +9,7 @@ interface BalanceWidgetProps {
 }
 
 export function BalanceWidget({ compact, variant = 'default' }: BalanceWidgetProps) {
-  const { balance, balanceTokens, isLoading } = useBalance();
+  const { balanceTokens, isLoading } = useBalance();
 
   if (compact) {
     return (
@@ -20,7 +20,7 @@ export function BalanceWidget({ compact, variant = 'default' }: BalanceWidgetPro
       >
         <Wallet className="w-3.5 h-3.5 text-primary" />
         <span className="text-xs font-bold text-primary">
-          {isLoading ? '...' : `${balanceTokens} tok`}
+          {isLoading ? '...' : `${balanceTokens} ток.`}
         </span>
       </NavLink>
     );
@@ -46,11 +46,8 @@ export function BalanceWidget({ compact, variant = 'default' }: BalanceWidgetPro
           <span className={variant === 'hero' ? "text-xs font-semibold text-foreground/95" : "text-xs font-semibold text-foreground"}>Баланс</span>
         </div>
         <p className={variant === 'hero' ? "text-sm font-bold text-primary" : "text-sm font-bold text-primary"}>
-          {isLoading ? '...' : `${balanceTokens} Tokens`}
+          {isLoading ? '...' : `${balanceTokens} Токены`}
         </p>
-        {!isLoading && (
-          <p className="text-[11px] text-muted-foreground">{balance.toFixed(2)} ₽</p>
-        )}
       </div>
       <Plus className={variant === 'hero'
         ? "w-4 h-4 text-primary/90 opacity-90 group-hover:opacity-100 transition-opacity"

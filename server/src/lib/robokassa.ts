@@ -10,7 +10,18 @@ function md5(input: string): string {
   return createHash('md5').update(input).digest('hex');
 }
 
+export function isRobokassaConfigured(): boolean {
+  return Boolean(MERCHANT_LOGIN() && PASSWORD1() && PASSWORD2());
+}
+
+export function assertRobokassaConfigured(): void {
+  if (!isRobokassaConfigured()) {
+    throw new Error('Robokassa не настроена на сервере: отсутствуют ROBOKASSA_LOGIN / ROBOKASSA_PASSWORD1 / ROBOKASSA_PASSWORD2');
+  }
+}
+
 export function generatePaymentUrl(amount: number, invId: number, description: string): string {
+  assertRobokassaConfigured();
   const outSum = amount.toFixed(2);
   // MD5 signature: MerchantLogin:OutSum:InvId:Password1
   const signature = md5(`${MERCHANT_LOGIN()}:${outSum}:${invId}:${PASSWORD1()}`);

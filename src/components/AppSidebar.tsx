@@ -191,30 +191,48 @@ export function AppSidebar() {
 
         {user && (
           <SidebarGroup className={collapsed ? "px-2 pb-2 pt-0" : "px-3 pb-3 pt-0"}>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1.5">
-                {memberItems.map((item) => {
-                  const isActive = location.pathname === item.url;
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className={getMenuButtonClass(isActive)}>
-                        <NavLink to={item.url} className="flex items-center gap-3" onClick={() => setOpenMobile(false)}>
-                          <span className={cn(
-                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors",
-                            isActive
-                              ? "border-primary/15 bg-primary/10 text-primary"
-                              : "border-border/40 bg-background/80 text-muted-foreground"
-                          )}>
-                            <item.icon className="h-4.5 w-4.5" style={{ width: '18px', height: '18px' }} />
-                          </span>
-                          <span className="font-medium">{item.title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
+            {collapsed ? (
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-1.5">
+                  {memberItems.map((item) => {
+                    const isActive = location.pathname === item.url;
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className={getMenuButtonClass(isActive)}>
+                          <NavLink to={item.url} className="flex items-center gap-3" onClick={() => setOpenMobile(false)}>
+                            <span className={cn(
+                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                              isActive
+                                ? "border-primary/15 bg-primary/10 text-primary"
+                                : "border-border/40 bg-background/80 text-muted-foreground"
+                            )}>
+                              <item.icon className="h-4.5 w-4.5" style={{ width: '18px', height: '18px' }} />
+                            </span>
+                            <span className="font-medium">{item.title}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            ) : (
+              <div className="rounded-xl border border-primary/15 bg-primary/5 px-3 py-3 shadow-xs">
+                <NavLink
+                  to="/referral-program"
+                  onClick={() => setOpenMobile(false)}
+                  className="flex items-center gap-3 rounded-lg px-1 transition-colors hover:text-foreground/90"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+                    <Gift className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-foreground">Реферальная программа</div>
+                    <div className="text-[10px] text-muted-foreground">Ссылка и бонусы</div>
+                  </div>
+                </NavLink>
+              </div>
+            )}
           </SidebarGroup>
         )}
 
