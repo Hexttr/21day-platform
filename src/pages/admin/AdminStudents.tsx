@@ -26,7 +26,8 @@ import {
   Pencil,
   UserCheck,
   UserX,
-  Sparkles
+  Sparkles,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -68,6 +69,7 @@ export default function AdminStudents() {
   const [isSavingName, setIsSavingName] = useState(false);
 
   const [changingRoleFor, setChangingRoleFor] = useState<string | null>(null);
+  const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     loadStudents();
@@ -182,6 +184,25 @@ export default function AdminStudents() {
       toast.error(error instanceof Error ? error.message : 'Ошибка сброса пароля');
     } finally {
       setIsResettingPassword(false);
+    }
+  };
+
+  const handleDeleteStudent = async (student: StudentProgress) => {
+    const confirmed = confirm(`Удалить пользователя "${student.name}" (${student.email})? Это действие необратимо.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingStudentId(student.user_id);
+    try {
+      await api(`/admin/users/${student.user_id}`, { method: 'DELETE' });
+      toast.success('Пользователь удалён');
+      loadStudents();
+    } catch (error) {
+      console.error('Error deleting student:', error);
+      toast.error(error instanceof Error ? error.message : 'Ошибка удаления пользователя');
+    } finally {
+      setDeletingStudentId(null);
     }
   };
 
@@ -400,6 +421,20 @@ export default function AdminStudents() {
                     }`}
                   >
                     <Ban className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteStudent(student)}
+                    disabled={deletingStudentId === student.user_id}
+                    title="Удалить пользователя"
+                    className="w-8 h-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    {deletingStudentId === student.user_id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
                   </Button>
                 </div>
               </div>

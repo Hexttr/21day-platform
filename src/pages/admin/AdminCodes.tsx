@@ -12,7 +12,8 @@ import {
   Copy,
   Shuffle,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -30,6 +31,7 @@ export default function AdminCodes() {
   const [newCode, setNewCode] = useState('');
   const [newComment, setNewComment] = useState('');
   const [savingCode, setSavingCode] = useState(false);
+  const [deletingCodeId, setDeletingCodeId] = useState<string | null>(null);
 
   useEffect(() => {
     loadInvitationCodes();
@@ -85,6 +87,25 @@ export default function AdminCodes() {
   const copyCodeToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success('Код скопирован!');
+  };
+
+  const deleteInvitationCode = async (code: InvitationCode) => {
+    const confirmed = confirm(`Удалить код "${code.code}"? Это действие необратимо.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingCodeId(code.id);
+    try {
+      await api(`/admin/codes/${code.id}`, { method: 'DELETE' });
+      toast.success('Код удалён');
+      loadInvitationCodes();
+    } catch (error) {
+      console.error('Error deleting code:', error);
+      toast.error(error instanceof Error ? error.message : 'Ошибка удаления кода');
+    } finally {
+      setDeletingCodeId(null);
+    }
   };
 
   const activeCount = invitationCodes.filter(c => c.is_active).length;
@@ -217,6 +238,18 @@ export default function AdminCodes() {
                       checked={code.is_active}
                       onCheckedChange={() => toggleCodeActive(code)}
                     />
+                    <button
+                      onClick={() => deleteInvitationCode(code)}
+                      disabled={deletingCodeId === code.id}
+                      className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-60"
+                      title="Удалить код"
+                    >
+                      {deletingCodeId === code.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
                   </div>
                 </div>
               ))}

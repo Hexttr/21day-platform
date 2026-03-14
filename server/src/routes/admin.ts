@@ -110,6 +110,31 @@ export async function adminRoutes(app: FastifyInstance) {
     return reply.send({ success: true });
   });
 
+  // Admin: delete user
+  app.delete<{ Params: { userId: string } }>('/admin/users/:userId', async (req, reply) => {
+    const payload = getAuthFromRequest(req);
+    if (!payload || payload.role !== 'admin') {
+      return reply.status(403).send({ error: 'Требуются права администратора' });
+    }
+
+    const { userId } = req.params;
+    if (!userId) {
+      return reply.status(400).send({ error: 'userId обязателен' });
+    }
+
+    if (userId === payload.userId) {
+      return reply.status(400).send({ error: 'Нельзя удалить собственный аккаунт администратора' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      return reply.status(404).send({ error: 'Пользователь не найден' });
+    }
+
+    await db.delete(users).where(eq(users.id, userId));
+    return reply.send({ success: true });
+  });
+
   // Admin: reset password
   app.post<{ Body: { email: string; newPassword: string } }>('/admin/reset-password', async (req, reply) => {
     const payload = getAuthFromRequest(req);
