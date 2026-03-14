@@ -4,6 +4,7 @@ import { db } from '../db/index.js';
 import { studentProgress } from '../db/schema.js';
 import { getAuthFromRequest } from '../lib/auth.js';
 import { getLessonAccessState } from '../lib/lesson-access.js';
+import { getEffectiveCourseAccess } from '../lib/course-access.js';
 
 export async function progressRoutes(app: FastifyInstance) {
   // Get my progress (or specific user's if admin impersonating)
@@ -12,11 +13,12 @@ export async function progressRoutes(app: FastifyInstance) {
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
     }
-    if (payload.role === 'ai_user') {
+    const access = await getEffectiveCourseAccess(payload.userId);
+    if (access.role === 'ai_user') {
       return reply.send([]);
     }
     const targetUserId = req.query.userId;
-    const userId = targetUserId && payload.role === 'admin' ? targetUserId : payload.userId;
+    const userId = targetUserId && access.role === 'admin' ? targetUserId : payload.userId;
     const rows = await db
       .select()
       .from(studentProgress)
@@ -33,12 +35,16 @@ export async function progressRoutes(app: FastifyInstance) {
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
     }
-    if (payload.role === 'ai_user') {
+    const access = await getEffectiveCourseAccess(payload.userId);
+    if (access.role === 'ai_user') {
       return reply.status(403).send({ error: 'Доступ к урокам недоступен для этого типа аккаунта' });
     }
     const { lessonId, completed, quizCompleted } = req.body || {};
     if (!lessonId || typeof lessonId !== 'number') {
       return reply.status(400).send({ error: 'lessonId обязателен' });
+    }
+    if (access.role !== 'admin' && lessonId > access.grantedLessons) {
+      return reply.status(403).send({ error: 'Для сохранения прогресса по этому уроку требуется более полный тариф курса' });
     }
     const [existing] = await db
       .select()
@@ -46,7 +52,7 @@ export async function progressRoutes(app: FastifyInstance) {
       .where(and(eq(studentProgress.userId, payload.userId), eq(studentProgress.lessonId, lessonId)));
 
     const accessState = await getLessonAccessState(payload.userId, lessonId, {
-      bypassAllRestrictions: payload.role === 'admin' && req.query.viewMode === 'all',
+      bypassAllRestrictions: access.role === 'admin' && req.query.viewMode === 'all',
     });
     if (!accessState.lessonExists) {
       return reply.status(404).send({ error: 'Урок не найден' });

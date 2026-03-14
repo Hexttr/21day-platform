@@ -9,6 +9,13 @@ export const ALLOWED_PLATFORM_SETTINGS = [
   'max_topup_amount',
   'free_for_admins',
   'analytics_active_user_daily_requests',
+  'referral_signup_bonus_tokens',
+  'referral_course_purchase_bonus_tokens',
+  'token_exchange_rate_rub_to_tokens',
+  'course_14_price_rub',
+  'course_21_price_rub',
+  'course_21_upgrade_price_rub',
+  'phone_verification_required_for_referrals',
 ] as const;
 
 export type AllowedPlatformSettingKey = typeof ALLOWED_PLATFORM_SETTINGS[number];

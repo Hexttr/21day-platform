@@ -15,7 +15,7 @@ interface WeekCardProps {
   defaultOpen?: boolean;
   isLessonPublished: (lessonId: number) => boolean;
   canAccessLesson: (lessonId: number) => boolean;
-  getLessonLockReason: (lessonId: number) => 'unpublished' | 'previous_quiz_incomplete' | null;
+  getLessonLockReason: (lessonId: number) => 'unpublished' | 'previous_quiz_incomplete' | 'course_access_required' | 'upgrade_required' | null;
   isDataLoading?: boolean;
 }
 

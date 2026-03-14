@@ -31,6 +31,8 @@ const AdminWaitlist = React.lazy(() => import("./pages/admin/AdminWaitlist"));
 const AdminBilling = React.lazy(() => import("./pages/admin/AdminBilling"));
 const AdminTestimonials = React.lazy(() => import("./pages/admin/AdminTestimonials"));
 const TopUp = React.lazy(() => import("./pages/TopUp"));
+const CourseAccessPage = React.lazy(() => import("./pages/CourseAccessPage"));
+const ReferralProgramPage = React.lazy(() => import("./pages/ReferralProgramPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -182,6 +184,22 @@ const App = () => (
                     element={
                       <AppLayout>
                         <TopUp />
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/course-access"
+                    element={
+                      <AppLayout>
+                        <CourseAccessPage />
+                      </AppLayout>
+                    }
+                  />
+                  <Route
+                    path="/referral-program"
+                    element={
+                      <AppLayout>
+                        <ReferralProgramPage />
                       </AppLayout>
                     }
                   />

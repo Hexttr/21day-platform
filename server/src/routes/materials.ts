@@ -3,6 +3,7 @@ import { eq, asc } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { practicalMaterials } from '../db/schema.js';
 import { getAuthFromRequest } from '../lib/auth.js';
+import { getEffectiveCourseAccess } from '../lib/course-access.js';
 
 export async function materialsRoutes(app: FastifyInstance) {
   // Get published materials (authenticated, ai_user — нет доступа)
@@ -11,9 +12,7 @@ export async function materialsRoutes(app: FastifyInstance) {
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
     }
-    if (payload.role === 'ai_user') {
-      return reply.status(403).send({ error: 'Доступ к материалам курса недоступен для этого типа аккаунта' });
-    }
+    const access = await getEffectiveCourseAccess(payload.userId);
     const rows = await db
       .select()
       .from(practicalMaterials)
@@ -27,6 +26,13 @@ export async function materialsRoutes(app: FastifyInstance) {
       seen.add(key);
       return true;
     });
+    if (access.role === 'ai_user' || !access.hasCourseAccess) {
+      return reply.send(unique.map((row) => ({
+        ...row,
+        videoUrl: '',
+        locked: true,
+      })));
+    }
     return reply.send(unique);
   });
 

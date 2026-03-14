@@ -10,7 +10,14 @@ export async function getSetting(key: string): Promise<string | null> {
     key === 'min_topup_amount' ||
     key === 'max_topup_amount' ||
     key === 'free_for_admins' ||
-    key === 'analytics_active_user_daily_requests'
+    key === 'analytics_active_user_daily_requests' ||
+    key === 'referral_signup_bonus_tokens' ||
+    key === 'referral_course_purchase_bonus_tokens' ||
+    key === 'token_exchange_rate_rub_to_tokens' ||
+    key === 'course_14_price_rub' ||
+    key === 'course_21_price_rub' ||
+    key === 'course_21_upgrade_price_rub' ||
+    key === 'phone_verification_required_for_referrals'
   ) {
     return getAllowedPlatformSetting(key);
   }

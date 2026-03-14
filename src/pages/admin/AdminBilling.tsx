@@ -64,6 +64,13 @@ const SETTINGS_FIELDS = [
   { key: 'max_topup_amount', label: 'Макс. сумма пополнения (₽)', hint: '', type: 'number' as const },
   { key: 'free_for_admins', label: 'Бесплатно для администраторов', hint: 'Админы не тратят баланс при использовании AI (чат, изображения, квиз)', type: 'boolean' as const },
   { key: 'analytics_active_user_daily_requests', label: 'Порог активного пользователя за 24 часа', hint: 'Если пользователь сделал не меньше этого числа AI-запросов за последние 24 часа, он считается активным в аналитике', type: 'number' as const },
+  { key: 'token_exchange_rate_rub_to_tokens', label: 'Курс токенов (сколько токенов за 1 ₽)', hint: 'Например, 10 означает что 50 ₽ отображаются как 500 Tokens', type: 'number' as const },
+  { key: 'referral_signup_bonus_tokens', label: 'Бонус за регистрацию по реферальной ссылке (Tokens)', hint: 'Начисляется и пригласившему, и приглашенному после подтверждения телефона', type: 'number' as const },
+  { key: 'referral_course_purchase_bonus_tokens', label: 'Бонус за покупку курса приглашенным (Tokens)', hint: 'Начисляется пригласившему после оплаты курса приглашенным пользователем', type: 'number' as const },
+  { key: 'course_14_price_rub', label: 'Цена курса 14 дней (₽)', hint: 'Стоимость базового тарифа', type: 'number' as const },
+  { key: 'course_21_price_rub', label: 'Цена курса 21 день (₽)', hint: 'Стоимость полного курса', type: 'number' as const },
+  { key: 'course_21_upgrade_price_rub', label: 'Апгрейд с 14 до 21 дня (₽)', hint: 'Разница, которую пользователь платит при расширении доступа', type: 'number' as const },
+  { key: 'phone_verification_required_for_referrals', label: 'Требовать подтверждение телефона для рефералки', hint: 'Если включено, реферальная ссылка и бонусы активируются только после подтверждения номера', type: 'boolean' as const },
 ] as const;
 
 function ProviderCard({ provider, modelCount, onUpdate }: { provider: AIProvider; modelCount: number; onUpdate: () => void }) {

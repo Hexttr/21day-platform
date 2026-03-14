@@ -1,4 +1,4 @@
-import { Users, Ticket, Play, ClipboardList, LogOut, BookOpen, X, Trash2, DollarSign, Sparkles, Shield, MessageCircle } from "lucide-react";
+import { Users, Ticket, Play, ClipboardList, LogOut, BookOpen, X, Trash2, DollarSign, Sparkles, Shield, MessageCircle, Gift } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -32,6 +32,10 @@ const adminItems = [
   { title: "Биллинг и модели", url: "/admin/billing", icon: DollarSign },
 ];
 
+const memberItems = [
+  { title: "Реферальная программа", url: "/referral-program", icon: Gift },
+];
+
 export function AppSidebar() {
   const { state, setOpenMobile } = useSidebar();
   const { isAdmin, user, signOut } = useAuth();
@@ -42,8 +46,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
 
   const goHome = () => {
-    const target = user?.role === 'ai_user' ? '/ai' : '/';
-    navigate(target);
+    navigate('/');
     setOpenMobile(false);
   };
 
@@ -149,7 +152,7 @@ export function AppSidebar() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <NavLink to={user?.role === 'ai_user' ? '/ai' : '/'} className="flex justify-center">
+            <NavLink to="/" className="flex justify-center">
               <div className="w-11 h-11 rounded-xl gradient-hero flex items-center justify-center shadow-glow">
                 <span className="text-white font-extrabold text-lg tracking-tight">21</span>
               </div>
@@ -184,6 +187,35 @@ export function AppSidebar() {
           <div className="px-3 pb-3">
             <BalanceWidget />
           </div>
+        )}
+
+        {user && (
+          <SidebarGroup className={collapsed ? "px-2 pb-2 pt-0" : "px-3 pb-3 pt-0"}>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1.5">
+                {memberItems.map((item) => {
+                  const isActive = location.pathname === item.url;
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className={getMenuButtonClass(isActive)}>
+                        <NavLink to={item.url} className="flex items-center gap-3" onClick={() => setOpenMobile(false)}>
+                          <span className={cn(
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                            isActive
+                              ? "border-primary/15 bg-primary/10 text-primary"
+                              : "border-border/40 bg-background/80 text-muted-foreground"
+                          )}>
+                            <item.icon className="h-4.5 w-4.5" style={{ width: '18px', height: '18px' }} />
+                          </span>
+                          <span className="font-medium">{item.title}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
 
         {/* ── AI Tools ── */}

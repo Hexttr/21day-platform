@@ -19,7 +19,7 @@ interface Transaction {
 const PRESET_AMOUNTS = [100, 300, 500, 1000, 3000, 5000];
 
 export default function TopUp() {
-  const { balance, isLoading: balanceLoading, refreshBalance } = useBalance();
+  const { balance, balanceTokens, tokenRate, isLoading: balanceLoading, refreshBalance } = useBalance();
   const [amount, setAmount] = useState<number>(300);
   const [customAmount, setCustomAmount] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -94,8 +94,11 @@ export default function TopUp() {
             <div>
               <p className="text-sm text-muted-foreground font-medium">Текущий баланс</p>
               <p className="text-3xl font-extrabold text-foreground" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                {balanceLoading ? '...' : `${balance.toFixed(2)} ₽`}
+                {balanceLoading ? '...' : `${balanceTokens} Tokens`}
               </p>
+              {!balanceLoading && (
+                <p className="text-xs text-muted-foreground mt-1">{balance.toFixed(2)} ₽ • {tokenRate} tokens = 1 ₽</p>
+              )}
             </div>
           </div>
 

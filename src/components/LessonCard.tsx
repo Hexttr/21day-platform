@@ -9,7 +9,7 @@ interface LessonCardProps {
   style?: React.CSSProperties;
   isPublished?: boolean;
   isAccessible?: boolean;
-  lockReason?: 'unpublished' | 'previous_quiz_incomplete' | null;
+  lockReason?: 'unpublished' | 'previous_quiz_incomplete' | 'course_access_required' | 'upgrade_required' | null;
   isDataLoading?: boolean;
 }
 
@@ -28,7 +28,13 @@ export function LessonCard({
   const quizDone = !isProgressLoading && isQuizCompleted(lesson.id);
   // Don't show as locked while data is loading
   const isLocked = !isDataLoading && !isAccessible;
-  const lockLabel = lockReason === 'previous_quiz_incomplete' ? 'Сначала предыдущий урок' : 'Скоро';
+  const lockLabel = lockReason === 'previous_quiz_incomplete'
+    ? 'Сначала предыдущий урок'
+    : lockReason === 'course_access_required'
+      ? 'Нужен доступ'
+      : lockReason === 'upgrade_required'
+        ? 'Нужен апгрейд'
+        : 'Скоро';
 
   return (
     <button

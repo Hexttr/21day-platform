@@ -31,7 +31,7 @@ interface LessonViewProps {
   onNavigateToLesson: (lessonId: number) => void;
   isLessonPublished: (lessonId: number) => boolean;
   canAccessLesson: (lessonId: number) => boolean;
-  getLessonLockReason: (lessonId: number) => 'unpublished' | 'previous_quiz_incomplete' | null;
+  getLessonLockReason: (lessonId: number) => 'unpublished' | 'previous_quiz_incomplete' | 'course_access_required' | 'upgrade_required' | null;
   courseViewMode?: CourseViewMode;
 }
 
@@ -146,7 +146,11 @@ export function LessonView({
   if (!isAccessible) {
     const lockMessage = lockReason === 'previous_quiz_incomplete'
       ? 'Сначала завершите AI-тест по предыдущему уроку, и следующий урок откроется автоматически.'
-      : 'Этот урок ещё не опубликован. Пожалуйста, вернитесь позже или выберите другой урок.';
+      : lockReason === 'course_access_required'
+        ? 'Для открытия уроков нужен доступ к курсу. Вы можете посмотреть программу, но сами уроки и материалы откроются после покупки.'
+        : lockReason === 'upgrade_required'
+          ? 'Этот урок входит в расширенный тариф. Оформите апгрейд до 21 дня, чтобы продолжить обучение.'
+          : 'Этот урок ещё не опубликован. Пожалуйста, вернитесь позже или выберите другой урок.';
 
     return (
       <div className="animate-fade-in-up">

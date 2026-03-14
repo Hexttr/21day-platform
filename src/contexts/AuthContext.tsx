@@ -6,6 +6,17 @@ export interface AppUser {
   email: string;
   name: string;
   role: 'admin' | 'student' | 'ai_user';
+  phone?: string | null;
+  phoneVerifiedAt?: string | null;
+}
+
+interface SignUpParams {
+  email: string;
+  password: string;
+  name: string;
+  invitationCode?: string;
+  referralCode?: string;
+  phone?: string;
 }
 
 interface AuthContextType {
@@ -15,7 +26,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isSessionReady: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, name: string, invitationCode: string) => Promise<{ error: string | null }>;
+  signUp: (params: SignUpParams) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
   validateInvitationCode: (code: string) => Promise<{ valid: boolean; codeId?: string; error?: string }>;
@@ -78,8 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string, invitationCode: string) => {
+  const signUp = async ({ email, password, name, invitationCode = '', referralCode, phone }: SignUpParams) => {
     const normalizedInvitationCode = invitationCode.trim().toUpperCase();
+    const normalizedReferralCode = referralCode?.trim().toUpperCase();
 
     if (normalizedInvitationCode) {
       const codeValidation = await validateInvitationCode(normalizedInvitationCode);
@@ -96,6 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password,
           name,
           invitationCode: normalizedInvitationCode || undefined,
+          referralCode: normalizedReferralCode || undefined,
+          phone: phone?.trim() || undefined,
         },
       });
       setToken(res.token);

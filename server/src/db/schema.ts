@@ -24,6 +24,8 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   name: text('name').notNull(),
+  phone: text('phone').unique(),
+  phoneVerifiedAt: timestamp('phone_verified_at', { withTimezone: true }),
   invitationCodeId: uuid('invitation_code_id').references(() => invitationCodes.id),
   isBlocked: boolean('is_blocked').notNull().default(false),
   blockedAt: timestamp('blocked_at', { withTimezone: true }),
@@ -94,6 +96,117 @@ export const waitlist = pgTable('waitlist', {
   contactType: text('contact_type').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const courses = pgTable('courses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: text('code').notNull().unique(),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  durationDays: integer('duration_days').notNull(),
+  grantedLessons: integer('granted_lessons').notNull(),
+  priceRub: numeric('price_rub', { precision: 12, scale: 2 }).notNull().default('0'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const courseOrders = pgTable('course_orders', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  courseId: uuid('course_id').notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  sourceCourseId: uuid('source_course_id').references(() => courses.id, { onDelete: 'set null' }),
+  orderType: text('order_type', { enum: ['purchase', 'upgrade'] }).notNull().default('purchase'),
+  status: text('status', { enum: ['pending', 'completed', 'failed', 'cancelled'] }).notNull().default('pending'),
+  expectedAmountRub: numeric('expected_amount_rub', { precision: 12, scale: 2 }).notNull(),
+  paidAmountRub: numeric('paid_amount_rub', { precision: 12, scale: 2 }),
+  paidAt: timestamp('paid_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const courseAccess = pgTable(
+  'course_access',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    courseId: uuid('course_id').notNull().references(() => courses.id, { onDelete: 'cascade' }),
+    grantedLessons: integer('granted_lessons').notNull(),
+    source: text('source', { enum: ['purchase', 'upgrade', 'admin', 'bonus'] }).notNull().default('purchase'),
+    status: text('status', { enum: ['active', 'revoked'] }).notNull().default('active'),
+    orderId: uuid('order_id').references(() => courseOrders.id, { onDelete: 'set null' }),
+    grantedAt: timestamp('granted_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('course_access_user_id_idx').on(t.userId)]
+);
+
+export const referralCodes = pgTable(
+  'referral_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerUserId: uuid('owner_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    code: text('code').notNull().unique(),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('referral_codes_owner_user_idx').on(t.ownerUserId)]
+);
+
+export const referralAttributions = pgTable(
+  'referral_attributions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    referralCodeId: uuid('referral_code_id').notNull().references(() => referralCodes.id, { onDelete: 'cascade' }),
+    referrerUserId: uuid('referrer_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    refereeUserId: uuid('referee_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    status: text('status', { enum: ['pending_phone_verification', 'signup_bonus_granted', 'purchase_bonus_granted', 'completed', 'cancelled'] }).notNull().default('pending_phone_verification'),
+    signupRewardGrantedAt: timestamp('signup_reward_granted_at', { withTimezone: true }),
+    purchaseRewardGrantedAt: timestamp('purchase_reward_granted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('referral_attributions_referee_user_idx').on(t.refereeUserId)]
+);
+
+export const referralRewards = pgTable(
+  'referral_rewards',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    attributionId: uuid('attribution_id').notNull().references(() => referralAttributions.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    rewardType: text('reward_type', { enum: ['signup_bonus', 'course_purchase_bonus'] }).notNull(),
+    amountRub: numeric('amount_rub', { precision: 12, scale: 2 }).notNull(),
+    amountTokens: integer('amount_tokens').notNull(),
+    status: text('status', { enum: ['granted', 'cancelled'] }).notNull().default('granted'),
+    referenceId: text('reference_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('referral_rewards_unique_idx').on(t.attributionId, t.userId, t.rewardType)]
+);
+
+export const phoneVerifications = pgTable(
+  'phone_verifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    phone: text('phone').notNull(),
+    purpose: text('purpose', { enum: ['referral_unlock', 'phone_change'] }).notNull().default('referral_unlock'),
+    codeHash: text('code_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+    attempts: integer('attempts').notNull().default(0),
+    requestCount: integer('request_count').notNull().default(1),
+    requestWindowStartedAt: timestamp('request_window_started_at', { withTimezone: true }).notNull().defaultNow(),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('phone_verifications_user_purpose_idx').on(t.userId, t.purpose)]
+);
 
 export const testimonials = pgTable('testimonials', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -203,11 +316,14 @@ export const payments = pgTable('payments', {
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   invId: serial('inv_id').notNull(),
   amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+  paidAmount: numeric('paid_amount', { precision: 12, scale: 2 }),
+  paymentType: text('payment_type', { enum: ['topup', 'course_purchase', 'course_upgrade'] }).notNull().default('topup'),
+  courseOrderId: uuid('course_order_id').references(() => courseOrders.id, { onDelete: 'set null' }),
   status: text('status', { enum: ['pending', 'completed', 'failed'] }).notNull().default('pending'),
   robokassaSignature: text('robokassa_signature'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp('completed_at', { withTimezone: true }),
-});
+}, (t) => [uniqueIndex('payments_inv_id_idx').on(t.invId)]);
 
 export const platformSettings = pgTable('platform_settings', {
   key: text('key').primaryKey(),
@@ -226,6 +342,13 @@ export type LessonContent = typeof lessonContent.$inferSelect;
 export type StudentProgress = typeof studentProgress.$inferSelect;
 export type PracticalMaterial = typeof practicalMaterials.$inferSelect;
 export type WaitlistEntry = typeof waitlist.$inferSelect;
+export type Course = typeof courses.$inferSelect;
+export type CourseOrder = typeof courseOrders.$inferSelect;
+export type CourseAccess = typeof courseAccess.$inferSelect;
+export type ReferralCode = typeof referralCodes.$inferSelect;
+export type ReferralAttribution = typeof referralAttributions.$inferSelect;
+export type ReferralReward = typeof referralRewards.$inferSelect;
+export type PhoneVerification = typeof phoneVerifications.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
 export type AIProvider = typeof aiProviders.$inferSelect;
 export type ProviderSecret = typeof providerSecrets.$inferSelect;

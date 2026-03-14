@@ -2,10 +2,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LoginForm } from '@/components/LoginForm';
 import { Dashboard } from '@/components/Dashboard';
 import { Loader2 } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
 
 const Index = () => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -16,7 +15,6 @@ const Index = () => {
   }
 
   if (!isAuthenticated) return <LoginForm />;
-  if (user?.role === 'ai_user') return <Navigate to="/ai" replace />;
   return <Dashboard />;
 };
 

@@ -3,6 +3,8 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { users, userRoles, invitationCodes } from '../db/schema.js';
 import { hashPassword, verifyPassword, signToken, getAuthFromRequest } from '../lib/auth.js';
+import { createReferralAttribution, ensureReferralCode } from '../lib/referrals.js';
+import { normalizePhone } from '../lib/phone-verification.js';
 
 export async function authRoutes(app: FastifyInstance) {
   // Validate invitation code (public)
@@ -26,9 +28,9 @@ export async function authRoutes(app: FastifyInstance) {
 
   // Sign up
   app.post<{
-    Body: { email: string; password: string; name: string; invitationCode?: string };
+    Body: { email: string; password: string; name: string; invitationCode?: string; referralCode?: string; phone?: string };
   }>('/auth/signup', async (req, reply) => {
-    const { email, password, name, invitationCode } = req.body || {};
+    const { email, password, name, invitationCode, referralCode, phone } = req.body || {};
     if (!email?.trim() || !password || !name?.trim()) {
       return reply.status(400).send({ error: 'Заполните все поля' });
     }
@@ -38,6 +40,15 @@ export async function authRoutes(app: FastifyInstance) {
     const [existing] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase()));
     if (existing) {
       return reply.status(400).send({ error: 'Пользователь с таким email уже существует' });
+    }
+
+    let normalizedPhone: string | null = null;
+    if (phone?.trim()) {
+      normalizedPhone = normalizePhone(phone);
+      const [phoneOwner] = await db.select().from(users).where(eq(users.phone, normalizedPhone));
+      if (phoneOwner) {
+        return reply.status(400).send({ error: 'Пользователь с таким телефоном уже существует' });
+      }
     }
 
     let codeRow: typeof invitationCodes.$inferSelect | undefined;
@@ -64,6 +75,7 @@ export async function authRoutes(app: FastifyInstance) {
         email: email.trim().toLowerCase(),
         passwordHash,
         name: name.trim(),
+        phone: normalizedPhone,
         invitationCodeId: codeRow?.id ?? null,
       })
       .returning();
@@ -71,12 +83,26 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: 'Ошибка создания пользователя' });
     }
     await db.insert(userRoles).values({ userId: newUser.id, role });
+    await ensureReferralCode(newUser.id);
+    if (referralCode?.trim()) {
+      await createReferralAttribution({ referralCode, refereeUserId: newUser.id });
+    }
     const token = signToken({
       userId: newUser.id,
       email: newUser.email,
       role,
     });
-    return reply.send({ token, user: { id: newUser.id, email: newUser.email, name: newUser.name, role } });
+    return reply.send({
+      token,
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        role,
+        phone: newUser.phone,
+        phoneVerifiedAt: newUser.phoneVerifiedAt,
+      },
+    });
   });
 
   // Sign in
@@ -103,7 +129,14 @@ export async function authRoutes(app: FastifyInstance) {
     const token = signToken({ userId: user.id, email: user.email, role });
     return reply.send({
       token,
-      user: { id: user.id, email: user.email, name: user.name, role },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role,
+        phone: user.phone,
+        phoneVerifiedAt: user.phoneVerifiedAt,
+      },
     });
   });
 
@@ -128,6 +161,8 @@ export async function authRoutes(app: FastifyInstance) {
         email: user.email,
         name: user.name,
         role,
+        phone: user.phone,
+        phoneVerifiedAt: user.phoneVerifiedAt,
       },
     });
   });

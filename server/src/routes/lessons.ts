@@ -4,6 +4,7 @@ import { db } from '../db/index.js';
 import { lessonContent, studentProgress } from '../db/schema.js';
 import { getAuthFromRequest } from '../lib/auth.js';
 import { getLessonAccessState } from '../lib/lesson-access.js';
+import { getEffectiveCourseAccess } from '../lib/course-access.js';
 
 export async function lessonRoutes(app: FastifyInstance) {
   // Get published lessons (authenticated, ai_user — нет доступа)
@@ -12,12 +13,10 @@ export async function lessonRoutes(app: FastifyInstance) {
     if (!payload) {
       return reply.status(401).send({ error: 'Не авторизован' });
     }
-    if (payload.role === 'ai_user') {
-      return reply.status(403).send({ error: 'Доступ к урокам недоступен для этого типа аккаунта' });
-    }
+    const access = await getEffectiveCourseAccess(payload.userId);
 
     const viewMode = req.query.viewMode === 'all' ? 'all' : 'student';
-    const bypassAllRestrictions = payload.role === 'admin' && viewMode === 'all';
+    const bypassAllRestrictions = access.role === 'admin' && viewMode === 'all';
 
     const rows = await db.select().from(lessonContent).orderBy(asc(lessonContent.lessonId));
     if (bypassAllRestrictions) {
@@ -35,7 +34,16 @@ export async function lessonRoutes(app: FastifyInstance) {
       );
 
     const completedLessonIds = new Set(completedRows.map((row) => row.lessonId));
-    const visibleRows = rows.filter((row) => row.isPublished || completedLessonIds.has(row.lessonId));
+    const maxVisibleLessons = access.role === 'ai_user' ? 21 : access.grantedLessons;
+    const visibleRows = rows.filter((row) => {
+      if (access.role === 'ai_user') {
+        return true;
+      }
+      if (row.lessonId > maxVisibleLessons) {
+        return false;
+      }
+      return row.isPublished || completedLessonIds.has(row.lessonId);
+    });
 
     return reply.send(visibleRows);
   });
@@ -54,9 +62,18 @@ export async function lessonRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Некорректный ID урока' });
     }
 
+    const access = await getEffectiveCourseAccess(payload.userId);
+    if (access.role === 'ai_user') {
+      return reply.status(403).send({ error: 'Приобретите доступ к курсу, чтобы открыть урок' });
+    }
+
+    if (access.role !== 'admin' && lessonId > access.grantedLessons) {
+      return reply.status(403).send({ error: 'Для доступа к этому уроку требуется более полный тариф курса' });
+    }
+
     const viewMode = req.query.viewMode === 'all' ? 'all' : 'student';
     const accessState = await getLessonAccessState(payload.userId, lessonId, {
-      bypassAllRestrictions: payload.role === 'admin' && viewMode === 'all',
+      bypassAllRestrictions: access.role === 'admin' && viewMode === 'all',
     });
     if (!accessState.lessonExists) {
       return reply.status(404).send({ error: 'Урок не найден' });

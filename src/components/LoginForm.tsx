@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,12 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, AlertCircle, Brain, Zap, Target, CalendarPlus } from 'lucide-react';
 import { TestimonialsSection } from './TestimonialsSection';
 import { WaitlistModal } from './WaitlistModal';
+import { useSearchParams } from 'react-router-dom';
 
 export function LoginForm() {
   const { signIn, signUp, validateInvitationCode } = useAuth();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [invitationCode, setInvitationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -20,6 +23,7 @@ export function LoginForm() {
   const [codeValidating, setCodeValidating] = useState(false);
   const [codeValid, setCodeValid] = useState<boolean | null>(null);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const referralCode = useMemo(() => searchParams.get('ref')?.trim().toUpperCase() || '', [searchParams]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +62,14 @@ export function LoginForm() {
 
     setIsLoading(true);
 
-    const { error } = await signUp(email, password, name, invitationCode);
+    const { error } = await signUp({
+      email,
+      password,
+      name,
+      phone,
+      invitationCode,
+      referralCode,
+    });
     
     if (error) {
       setError(error);
@@ -126,7 +137,7 @@ export function LoginForm() {
                 size="lg"
               >
                 <CalendarPlus className="w-5 h-5 mr-2" />
-                Записаться в следующий поток
+                Ранний доступ на платформу
               </Button>
             </div>
           </div>
@@ -157,7 +168,7 @@ export function LoginForm() {
                 size="lg"
               >
                 <CalendarPlus className="w-5 h-5 mr-2" />
-                Записаться в следующий поток
+                Ранний доступ на платформу
               </Button>
             </div>
 
@@ -239,6 +250,11 @@ export function LoginForm() {
 
                   <TabsContent value="register" className="mt-0">
                     <form onSubmit={handleSignUp} className="space-y-5">
+                      {referralCode && (
+                        <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-foreground">
+                          Вы регистрируетесь по реферальной ссылке. Код приглашения: <span className="font-semibold text-primary">{referralCode}</span>
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label htmlFor="invitation-code" className="text-sm font-medium">
                           Пригласительный код
@@ -283,6 +299,22 @@ export function LoginForm() {
                           required
                           className="h-12 rounded-xl border-border/50 focus:border-primary bg-secondary/30"
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone-register" className="text-sm font-medium">
+                          Телефон
+                        </Label>
+                        <Input
+                          id="phone-register"
+                          type="tel"
+                          placeholder="+7 999 123 45 67"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="h-12 rounded-xl border-border/50 focus:border-primary bg-secondary/30"
+                        />
+                        <p className="text-xs text-muted-foreground leading-5">
+                          Необязательно на старте. Подтвержденный номер понадобится для реферальной программы.
+                        </p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="email-register" className="text-sm font-medium">

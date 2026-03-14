@@ -422,6 +422,13 @@ async function seedBilling() {
     { key: 'max_topup_amount', value: '10000', description: 'Максимальная сумма пополнения (RUB)' },
     { key: 'free_for_admins', value: '1', description: 'Бесплатно для администраторов (1=да, 0=нет)' },
     { key: 'analytics_active_user_daily_requests', value: '5', description: 'Порог запросов за 24 часа для метрики активных пользователей' },
+    { key: 'referral_signup_bonus_tokens', value: '500', description: 'Бонус по реферальной программе за регистрацию и подтверждение телефона' },
+    { key: 'referral_course_purchase_bonus_tokens', value: '5000', description: 'Бонус пригласившему за покупку курса приглашённым пользователем' },
+    { key: 'token_exchange_rate_rub_to_tokens', value: '10', description: 'Сколько токенов показывать за 1 RUB пользовательского баланса' },
+    { key: 'course_14_price_rub', value: '10500', description: 'Цена курса на 14 дней' },
+    { key: 'course_21_price_rub', value: '14500', description: 'Цена курса на 21 день' },
+    { key: 'course_21_upgrade_price_rub', value: '4000', description: 'Цена апгрейда с 14 дней до 21 дня' },
+    { key: 'phone_verification_required_for_referrals', value: '1', description: 'Требовать подтверждение телефона для реферальной программы' },
   ];
 
   for (const s of settingsSeeds) {

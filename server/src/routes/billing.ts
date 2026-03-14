@@ -1,10 +1,78 @@
 import { FastifyInstance } from 'fastify';
 import { eq, desc, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { payments, balanceTransactions, aiUsageLog, userBalances, aiModels, aiProviders } from '../db/schema.js';
+import { payments, balanceTransactions, aiUsageLog, userBalances, aiModels, aiProviders, courseOrders, courses } from '../db/schema.js';
 import { getAuthFromRequest } from '../lib/auth.js';
 import { getBalance, ensureBalanceRow, creditBalance, getSetting } from '../lib/billing.js';
 import { generatePaymentUrl, verifyResultSignature, verifySuccessSignature } from '../lib/robokassa.js';
+import { grantCourseAccess } from '../lib/course-access.js';
+import { grantCoursePurchaseReferralBonusIfEligible } from '../lib/referrals.js';
+
+async function completePaymentByInvId(invId: number, outSum: string, signatureValue: string) {
+  const [payment] = await db.select().from(payments).where(eq(payments.invId, invId));
+  if (!payment) {
+    throw new Error('Payment not found');
+  }
+
+  if (payment.status === 'completed') {
+    return payment;
+  }
+
+  const amount = parseFloat(outSum);
+  await db.update(payments).set({
+    status: 'completed',
+    paidAmount: amount.toFixed(2),
+    robokassaSignature: signatureValue,
+    completedAt: new Date(),
+  }).where(eq(payments.id, payment.id));
+
+  if (payment.paymentType === 'topup') {
+    await creditBalance(payment.userId, amount, 'topup', `Пополнение через Робокассу #${invId}`, payment.id);
+    return payment;
+  }
+
+  if (!payment.courseOrderId) {
+    throw new Error('Course order is missing for payment');
+  }
+
+  const [order] = await db.select().from(courseOrders).where(eq(courseOrders.id, payment.courseOrderId));
+  if (!order) {
+    throw new Error('Course order not found');
+  }
+
+  const expectedAmount = parseFloat(order.expectedAmountRub);
+  if (Math.abs(expectedAmount - amount) > 0.01) {
+    await db.update(courseOrders).set({
+      status: 'failed',
+      paidAmountRub: amount.toFixed(2),
+      updatedAt: new Date(),
+    }).where(eq(courseOrders.id, order.id));
+    throw new Error('Payment amount mismatch');
+  }
+
+  const [course] = await db.select().from(courses).where(eq(courses.id, order.courseId));
+  if (!course) {
+    throw new Error('Course not found');
+  }
+
+  await db.update(courseOrders).set({
+    status: 'completed',
+    paidAmountRub: amount.toFixed(2),
+    paidAt: new Date(),
+    updatedAt: new Date(),
+  }).where(eq(courseOrders.id, order.id));
+
+  await grantCourseAccess({
+    userId: order.userId,
+    courseId: order.courseId,
+    grantedLessons: course.grantedLessons,
+    source: order.orderType === 'upgrade' ? 'upgrade' : 'purchase',
+    orderId: order.id,
+  });
+  await grantCoursePurchaseReferralBonusIfEligible(order.userId, order.id);
+
+  return payment;
+}
 
 export async function billingRoutes(app: FastifyInstance) {
   // Get my balance
@@ -13,7 +81,12 @@ export async function billingRoutes(app: FastifyInstance) {
     if (!payload) return reply.status(401).send({ error: 'Не авторизован' });
     await ensureBalanceRow(payload.userId);
     const balance = await getBalance(payload.userId);
-    return reply.send({ balance });
+    const tokenRate = parseFloat(await getSetting('token_exchange_rate_rub_to_tokens') || '10');
+    return reply.send({
+      balance,
+      tokenRate,
+      balanceTokens: Math.round(balance * tokenRate),
+    });
   });
 
   // Get my transactions
@@ -70,6 +143,7 @@ export async function billingRoutes(app: FastifyInstance) {
     const [payment] = await db.insert(payments).values({
       userId: payload.userId,
       amount: amount.toFixed(2),
+      paymentType: 'topup',
       status: 'pending',
     }).returning();
 
@@ -93,22 +167,8 @@ export async function billingRoutes(app: FastifyInstance) {
       }
 
       const invId = parseInt(InvId, 10);
-      const [payment] = await db.select().from(payments).where(eq(payments.invId, invId));
-      if (!payment) return reply.status(404).send('Payment not found');
-
-      if (payment.status === 'completed') {
-        return reply.send(`OK${InvId}`);
-      }
-
-      const amount = parseFloat(OutSum);
-      await db.update(payments).set({
-        status: 'completed',
-        robokassaSignature: SignatureValue,
-        completedAt: new Date(),
-      }).where(eq(payments.id, payment.id));
-
-      await creditBalance(payment.userId, amount, 'topup', `Пополнение через Робокассу #${InvId}`, payment.id);
-      console.log(`[Robokassa] Payment #${InvId} completed: ${amount} RUB for user ${payment.userId}`);
+      const payment = await completePaymentByInvId(invId, OutSum, SignatureValue);
+      console.log(`[Robokassa] Payment #${InvId} completed: ${OutSum} RUB for user ${payment.userId}`);
 
       return reply.send(`OK${InvId}`);
     }
@@ -130,12 +190,14 @@ export async function billingRoutes(app: FastifyInstance) {
       const invId = parseInt(InvId, 10);
       const [payment] = await db.select().from(payments).where(eq(payments.invId, invId));
       if (payment && payment.status !== 'completed') {
-        const amount = parseFloat(OutSum);
-        await db.update(payments).set({ status: 'completed', robokassaSignature: SignatureValue, completedAt: new Date() }).where(eq(payments.id, payment.id));
-        await creditBalance(payment.userId, amount, 'topup', `Пополнение через Робокассу #${InvId}`, payment.id);
+        await completePaymentByInvId(invId, OutSum, SignatureValue);
       }
 
-      return reply.redirect(`${siteUrl}/topup?status=success&amount=${OutSum}`);
+      if (payment?.paymentType === 'topup') {
+        return reply.redirect(`${siteUrl}/topup?status=success&amount=${OutSum}`);
+      }
+
+      return reply.redirect(`${siteUrl}/?coursePayment=success&amount=${OutSum}`);
     }
   );
 
@@ -149,10 +211,18 @@ export async function billingRoutes(app: FastifyInstance) {
 
       if (InvId) {
         const invId = parseInt(InvId, 10);
+        const [payment] = await db.select().from(payments).where(eq(payments.invId, invId));
         await db.update(payments).set({ status: 'failed' }).where(eq(payments.invId, invId));
+        if (payment?.courseOrderId) {
+          await db.update(courseOrders).set({ status: 'failed', updatedAt: new Date() }).where(eq(courseOrders.id, payment.courseOrderId));
+        }
+
+        if (payment?.paymentType === 'topup') {
+          return reply.redirect(`${siteUrl}/topup?status=failed`);
+        }
       }
 
-      return reply.redirect(`${siteUrl}/topup?status=failed`);
+      return reply.redirect(`${siteUrl}/?coursePayment=failed`);
     }
   );
 
