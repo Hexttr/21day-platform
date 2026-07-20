@@ -30,6 +30,16 @@ type ImageMessage = {
 /** Превью в localStorage, полное — в IndexedDB */
 type StoredMessage = { role: 'user'; content: string } | { role: 'assistant'; imageUrl?: string; fullImageId?: string };
 
+function getImageDownloadExtension(imageUrl: string): string {
+  const mimeMatch = imageUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/i);
+  const mime = mimeMatch?.[1]?.toLowerCase();
+  if (mime === 'image/jpeg' || mime === 'image/jpg') return 'jpg';
+  if (mime === 'image/webp') return 'webp';
+  if (mime === 'image/gif') return 'gif';
+  if (mime === 'image/png') return 'png';
+  return 'png';
+}
+
 export function ImageGenerator() {
   const [messages, setMessages] = useState<ImageMessage[]>([]);
   const [prompt, setPrompt] = useState('');
@@ -289,9 +299,10 @@ export function ImageGenerator() {
                           const full = await getFullImage(msg.fullImageId);
                           if (full) url = full;
                         }
+                        const extension = getImageDownloadExtension(url);
                         const link = document.createElement('a');
                         link.href = url;
-                        link.download = `generated-${Date.now()}.png`;
+                        link.download = `generated-${Date.now()}.${extension}`;
                         link.click();
                       }}
                     >

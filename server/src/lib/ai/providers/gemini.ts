@@ -148,8 +148,17 @@ export class GeminiAdapter implements AIProviderAdapter {
   }
 
   async generateImage(params: GenerateImageParams): Promise<GenerateImageResult> {
+    const enhancedPrompt = `${params.prompt.trim()}
+
+Технические требования к результату:
+- максимальное доступное качество изображения
+- максимально доступное разрешение
+- высокая детализация мелких элементов
+- четкие контуры и аккуратные текстуры
+- без заметных артефактов и лишнего размытия`.trim();
+
     const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [
-      { text: params.prompt.trim() },
+      { text: enhancedPrompt },
     ];
 
     for (const img of params.images) {
